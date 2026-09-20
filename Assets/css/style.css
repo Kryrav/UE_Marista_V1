@@ -1,0 +1,63 @@
+.app-sidebar__user-avatar {
+    width: 48px;
+    height: 48px;
+    background: gray;
+    padding: 0px;
+}
+.app-sidebar__toggle{
+	display: -webkit-flex;
+	display: -moz-flex;
+	display: -ms-flex;
+	display: -o-flex;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 15pt;
+}
+.app-sidebar__toggle::before{
+	display: none;
+}
+.headerRegister, .header-primary{
+	background: #009688;
+	color: #FFF;
+}
+.headerUpdate{
+	background: #007bff;
+	color: #FFF;
+}
+.notBlock{
+	display: none;
+}
+/*Estilos login*/
+#divLoading{
+	position: fixed;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: rgba(254,254,255, .65);
+	z-index: 9999;
+	display: none;
+}
+#divLoading img{
+	width: 50px;
+	height: 50px;
+}
+.required{
+	color: red;
+	font-size: 13pt;
+	font-weight: bold;
+}
+
+
+  
+  #tableGestiones {
+	width: 100% !important; /* Asegura que la tabla ocupe el 100% del ancho disponible */
+	table-layout: fixed; /* Establece un comportamiento fijo para el ancho de las columnas */
+  }
+  
+
+
+  

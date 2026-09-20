@@ -1,0 +1,61 @@
+/* ==========================================================================
+   MENSUALIDADES - vista profesional institucional
+   Paleta: Azul #1a3b5d | Dorado #c4a35a
+   ========================================================================== */
+
+/* ---------- KPIs (mismo widget del dashboard: altura uniforme) ---------- */
+#kpiMensualidades .widget-small .info small {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.75rem;
+}
+
+/* ---------- Gráficos ---------- */
+.men-chart h5 {
+    color: var(--marista-blue, #1a3b5d);
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.men-canvas {
+    position: relative;
+    height: 230px;
+}
+
+.men-canvas-bar {
+    height: 230px;
+}
+
+.men-legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--text-dark, #2c3e50);
+}
+
+.men-legend i {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    margin-right: 5px;
+}
+
+#pills-tab .nav-link {
+    color: var(--marista-blue, #1a3b5d);
+    font-weight: 600;
+}
+
+#pills-tab .nav-link.active {
+    background: var(--marista-blue, #1a3b5d);
+    color: #fff;
+}
+
+#listaPensionesEstudiante tr.fila-vencida td {
+    background: #fdf0ef;
+}
+
+#listaPensionesEstudiante tr.fila-vencida td:first-child {
+    border-left: 3px solid var(--danger, #e74c3c);
+}

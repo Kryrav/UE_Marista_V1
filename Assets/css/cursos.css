@@ -1,0 +1,206 @@
+/* ==========================================================================
+   CURSOS - Lista de paralelos habilitados
+   UI/UX: toolbar con filtros + cards institucionales Marista
+   Paleta: Azul #1a3b5d | Dorado #c4a35a (vars de Template_Marista_2.css)
+   ========================================================================== */
+
+/* ---------- Toolbar ---------- */
+.curso-toolbar {
+    border-top: 3px solid var(--marista-gold, #c4a35a);
+}
+
+.curso-toolbar .input-group-text {
+    background: var(--marista-blue, #1a3b5d);
+    border-color: var(--marista-blue, #1a3b5d);
+    color: #fff;
+}
+
+.curso-resumen {
+    font-size: 0.85rem;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.curso-resumen b {
+    color: var(--marista-blue, #1a3b5d);
+    font-size: 1rem;
+}
+
+/* ---------- Cards ---------- */
+.curso-card {
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0,0,0,0.05));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.curso-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md, 0 4px 8px rgba(0,0,0,0.1));
+}
+
+.curso-banner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--marista-blue, #1a3b5d) 0%, var(--marista-blue-light, #2c5282) 100%);
+    color: #fff;
+}
+
+.curso-monogram {
+    flex: 0 0 auto;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.05rem;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid var(--marista-gold, #c4a35a);
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.curso-banner-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+    min-width: 0;
+}
+
+.curso-nivel {
+    font-weight: 700;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.curso-turno {
+    font-size: 0.8rem;
+    opacity: 0.85;
+}
+
+.curso-estado {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.7rem;
+}
+
+/* Card inactiva: atenuada */
+.curso-card.curso-inactivo .curso-banner {
+    background: linear-gradient(135deg, #5d6d7e 0%, #85929e 100%);
+}
+.curso-card.curso-inactivo .curso-monogram {
+    border-color: #bdc3c7;
+}
+.curso-card.curso-inactivo {
+    opacity: 0.92;
+}
+
+.curso-card .card-body {
+    padding: 14px 16px 10px;
+}
+
+.curso-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--text-dark, #2c3e50);
+    margin-bottom: 6px;
+    min-width: 0;
+}
+
+.curso-meta i {
+    color: var(--marista-gold-dark, #a88947);
+    width: 16px;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.curso-meta span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.curso-meta.muted span {
+    color: var(--text-muted, #7f8c8d);
+    font-style: italic;
+}
+
+.curso-cupo-label {
+    font-size: 0.8rem;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.curso-card .progress {
+    height: 8px;
+    border-radius: 6px;
+    background: #eef2f5;
+    margin: 4px 0;
+}
+
+.curso-ocupacion {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.curso-ocupacion.ok { color: var(--success, #27ae60); }
+.curso-ocupacion.warn { color: var(--warning, #f39c12); }
+.curso-ocupacion.full { color: var(--danger, #e74c3c); }
+
+.curso-card .card-footer {
+    background: #fff;
+    border-top: 1px solid var(--border-color, #e1e8ed);
+    padding: 10px 12px;
+}
+
+.curso-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.curso-actions .btn {
+    flex: 1;
+}
+
+/* ---------- Skeleton de carga ---------- */
+.curso-skeleton .sk {
+    border-radius: 6px;
+    background: linear-gradient(90deg, #eef2f5 25%, #e2e8ed 50%, #eef2f5 75%);
+    background-size: 200% 100%;
+    animation: curso-shimmer 1.2s infinite;
+}
+
+@keyframes curso-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ---------- Estado vacío ---------- */
+.curso-empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted, #7f8c8d);
+    background: #fff;
+    border: 1px dashed var(--border-color, #e1e8ed);
+    border-radius: 12px;
+}
+
+.curso-empty i {
+    color: var(--marista-gold, #c4a35a);
+    margin-bottom: 12px;
+}
+
+.curso-empty h5 {
+    color: var(--marista-blue, #1a3b5d);
+    font-weight: 700;
+}

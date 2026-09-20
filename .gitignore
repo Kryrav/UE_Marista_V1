@@ -1,0 +1,2 @@
+# Excluir zips grandes de librerías (se mantienen localmente, no se suben al repo)
+*.zip

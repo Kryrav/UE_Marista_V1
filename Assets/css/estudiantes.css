@@ -1,0 +1,332 @@
+/* ==========================================================================
+   ESTUDIANTES - tabla, wizard de alta y ficha 360°
+   Paleta: Azul #1a3b5d | Dorado #c4a35a
+   ========================================================================== */
+
+.est-toolbar {
+    border-top: 3px solid var(--marista-gold, #c4a35a);
+}
+
+.est-resumen {
+    font-size: 0.85rem;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.est-resumen b {
+    color: var(--marista-blue, #1a3b5d);
+}
+
+/* Avatar en tabla */
+.est-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--marista-gold, #c4a35a);
+    display: block;
+    margin: 0 auto;
+}
+
+.est-initials {
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ---------- Wizard ---------- */
+.est-steps {
+    list-style: none;
+    display: flex;
+    padding: 0;
+    margin: 0 0 18px;
+    gap: 6px;
+}
+
+.est-steps li {
+    flex: 1;
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted, #7f8c8d);
+    padding: 8px 4px;
+    border-bottom: 3px solid var(--border-color, #e1e8ed);
+}
+
+.est-steps li span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--border-color, #e1e8ed);
+    color: #fff;
+    font-size: 0.75rem;
+    margin-right: 4px;
+}
+
+.est-steps li.active {
+    color: var(--marista-blue, #1a3b5d);
+    border-bottom-color: var(--marista-gold, #c4a35a);
+}
+
+.est-steps li.active span {
+    background: var(--marista-blue, #1a3b5d);
+}
+
+.est-preview {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--marista-gold, #c4a35a);
+    background: #f4f7fa;
+}
+
+/* ---------- Ficha 360° ---------- */
+.ficha-header {
+    background: linear-gradient(135deg, var(--marista-blue, #1a3b5d) 0%, var(--marista-blue-light, #2c5282) 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ficha-header .close {
+    margin-left: auto;
+    align-self: flex-start;
+}
+
+.ficha-foto {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--marista-gold, #c4a35a);
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+.ficha-id .modal-title {
+    margin: 0;
+    font-weight: 700;
+}
+
+.ficha-kpi {
+    background: #f4f7fa;
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 10px;
+    padding: 10px 6px;
+}
+
+.ficha-kpi b {
+    display: block;
+    font-size: 1.25rem;
+    color: var(--marista-blue, #1a3b5d);
+}
+
+.ficha-kpi small {
+    color: var(--text-muted, #7f8c8d);
+    font-size: 0.75rem;
+}
+
+.ficha-tutor, .ficha-mat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    background: #fff;
+}
+
+.ficha-tutor i, .ficha-mat i {
+    color: var(--marista-gold-dark, #a88947);
+}
+
+/* Las tarjetas de tutor viven en tutores.css (compartido con el módulo Tutores) */
+
+/* ---------- Tira de legajo en la ficha ---------- */
+.legajo-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px dashed var(--marista-gold, #c4a35a);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    background: #fffdf5;
+    font-size: 0.85rem;
+}
+
+.legajo-num {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--marista-blue, #1a3b5d);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.legajo-num small {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.legajo-ubic {
+    color: var(--text-dark, #2c3e50);
+}
+
+.legajo-ubic i {
+    color: var(--marista-gold-dark, #a88947);
+    margin-right: 4px;
+}
+
+/* ---------- Detalle de pensiones en la ficha ---------- */
+.pen-totales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    padding: 10px 14px;
+    background: #f4f7fa;
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+}
+
+.pen-gestion {
+    color: var(--marista-blue, #1a3b5d);
+    font-weight: 700;
+    margin: 12px 0 6px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--marista-gold, #c4a35a);
+}
+
+.pen-tabla {
+    font-size: 0.83rem;
+}
+
+.pen-tabla thead th {
+    background: var(--marista-blue, #1a3b5d);
+    color: #fff;
+    border-color: var(--marista-blue, #1a3b5d);
+    font-weight: 600;
+}
+
+.pen-tabla tfoot th {
+    background: #f4f7fa;
+}
+
+tr.pen-pendiente td {
+    background: #fef6ec;
+}
+
+tr.pen-pendiente td:first-child {
+    border-left: 3px solid var(--warning, #f39c12);
+}
+
+tr.pen-vencida td {
+    background: #fdf0ef;
+}
+
+tr.pen-vencida td:first-child {
+    border-left: 3px solid var(--danger, #e74c3c);
+}
+
+/* ---------- Pestañas de la ficha ---------- */
+.ficha-tabs {
+    border-bottom: 2px solid var(--border-color, #e1e8ed);
+}
+
+.ficha-tabs .nav-link {
+    color: var(--text-muted, #7f8c8d);
+    font-weight: 600;
+    font-size: 0.88rem;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+}
+
+.ficha-tabs .nav-link:hover {
+    color: var(--marista-blue, #1a3b5d);
+}
+
+.ficha-tabs .nav-link.active {
+    color: var(--marista-blue, #1a3b5d);
+    border-bottom-color: var(--marista-gold, #c4a35a);
+    background: transparent;
+}
+
+/* ---------- Foto ampliable ---------- */
+.ficha-foto-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    cursor: zoom-in;
+}
+
+.ficha-foto-wrap:hover .ficha-foto-zoom {
+    opacity: 1;
+}
+
+.ficha-foto-zoom {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--marista-gold, #c4a35a);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border: 2px solid #fff;
+}
+
+.ficha-foto-nota {
+    color: var(--marista-gold-light, #d4b87a);
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+/* Lightbox propio (evita apilar modales Bootstrap) */
+#fotoLightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(15, 42, 65, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    padding: 24px;
+}
+
+#fotoLightbox img {
+    max-width: 90vw;
+    max-height: 88vh;
+    border-radius: 12px;
+    border: 4px solid var(--marista-gold, #c4a35a);
+    object-fit: contain;
+    background: #fff;
+}
+
+#fotoLightboxClose {
+    position: absolute;
+    top: 14px;
+    right: 24px;
+    color: #fff;
+    font-size: 2.5rem;
+    line-height: 1;
+    cursor: pointer;
+}

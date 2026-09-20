@@ -1,0 +1,43 @@
+/* Reportes de dirección */
+.rep-menu .nav-link {
+    color: #1a3b5d;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    margin-bottom: 2px;
+    padding: 9px 14px;
+}
+
+.rep-menu .nav-link:hover {
+    background: #eef2f5;
+    color: #1a3b5d;
+}
+
+/* Activa: dorado institucional + texto oscuro (contraste garantizado) */
+.rep-menu .nav-link.active,
+.rep-menu .nav-pills .nav-link.active,
+.nav-pills .rep-menu .nav-link.active {
+    background: #c4a35a !important;
+    background-color: #c4a35a !important;
+    color: #1a3b5d !important;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(196, 163, 90, 0.4);
+}
+
+.print-head { display: none; }
+
+.men-canvas { position: relative; height: 240px; }
+.men-canvas-sm { height: 200px; }
+
+@media print {
+    .no-print, .app-sidebar, .app-header, .app-title, .dataTables_length,
+    .dataTables_filter, .dataTables_info, .dataTables_paginate, .dt-buttons { display: none !important; }
+    .app-content { margin: 0 !important; padding: 0 !important; }
+    .print-head { display: block !important; text-align: center; border-bottom: 3px double #1a3b5d; margin-bottom: 12px; }
+    .print-head h2 { color: #1a3b5d; font-size: 17px; margin: 0; }
+    .print-head p { font-size: 11px; color: #555; }
+    .tile { box-shadow: none !important; border: 1px solid #999 !important; }
+    .tab-content > .tab-pane { display: block !important; opacity: 1 !important; }
+    .tab-content > .tab-pane:not(.active) { display: none !important; }
+    canvas { max-height: 220px; }
+}

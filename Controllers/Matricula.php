@@ -1,0 +1,158 @@
+<?php
+    class Matricula extends Controllers{
+		public function __construct()
+		{
+			parent::__construct();
+			session_start();
+			if(empty($_SESSION['login']))
+			{
+				header('Location: '.base_url().'/login');
+			}
+			getPermisos(4);//Id del módulo en la base de datos Extrayendo los permisos del modulo logueado
+		}
+
+		public function index()
+		{
+			if(empty($_SESSION['permisosMod']['r'])){
+				header("Location:".base_url().'/dashboard');
+			}
+			$data['page_tag'] = "Matrícula";
+			$data['page_title'] = "Matrícula <small>Registro</small>";
+			$data['page_name'] = "Matrícula";
+			$data['page_functions_js'] = "functions_matricula.js";
+			$this->views->getView($this,"matricula",$data);
+		}
+
+		// Stub legacy eliminado: usar insertNewMatricula / getMatricula / delMatricula
+
+		// LISTA TODAS LAS MATRÍCULAS REGISTRADAS EN TODAS LAS GESTIONES 
+		public function getMatriculaAll()
+		{
+			if ($_SESSION['permisosMod']['r']) {
+				$arrData=$this->model->selectMatriculasAll();
+				for ($i=0; $i < count($arrData); $i++) {
+                    $btnView = '';
+                    $btnEdit = '';
+                    $btnDelete = '';
+
+                    if($arrData[$i]['estado_matricula'] == 1)
+                    {
+                        $arrData[$i]['estado_matricula'] = '<span class="badge badge-success">Activo</span>';
+                    }else{
+                        $arrData[$i]['estado_matricula'] = '<span class="badge badge-danger">Inactivo</span>';
+                    }
+
+                    if($_SESSION['permisosMod']['r']){
+                        $btnView = '<button class="btn btn-info btn-sm btnViewMatricula" onClick="fntViewMatricula('.$arrData[$i]['id_matricula'].')" title="Ver Matrícula"><i class="far fa-eye"></i></button>';
+                    }
+                    if($_SESSION['permisosMod']['u']){
+                        $btnEdit = '<button class="btn btn-primary  btn-sm btnEditMatricula" onClick="fntEditMatricula(this,'.$arrData[$i]['id_matricula'].')" title="Editar Matrícula"><i class="fas fa-pencil-alt"></i></button>';
+                    }
+                    if($_SESSION['permisosMod']['d']){
+                        $btnDelete = '<button class="btn btn-danger btn-sm btnDelMatricula" onClick="fntDelMatricula('.$arrData[$i]['id_matricula'].')" title="Eliminar Matrícula"><i class="far fa-trash-alt"></i></button>';
+
+                    }
+                    $arrData[$i]['options'] = '<div class="text-center">'.$btnView.' '.$btnEdit.' '.$btnDelete.'</div>';
+                }
+                echo json_encode($arrData,JSON_UNESCAPED_UNICODE);
+			}
+			die();
+		}
+
+		// INSERTAR / ACTUALIZAR MATRÍCULA 
+		public function insertNewMatricula()
+		{
+			if ($_POST) {
+				if (empty($_POST['intGestion'])||empty($_POST['listParalelos'])||empty($_POST['listTipoEstudiante'])||empty($_POST['listStateInscripcion'])||!isset($_POST['newG'])) {
+					$arrResponse=array("status"=>false,"msg"=>'No se recibieron los datos Correctamente');
+					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+				}
+				// Almacenamos los datos en variables (folio es texto libre, no intval)
+				$boolNew = strClean($_POST['newG']) == "1";
+				$strCi = strClean($_POST['txtCi'] ?? '');
+				$intGestion=intval($_POST['intGestion']);
+				$intIdParalelo=intval($_POST['listParalelos']);
+				$strTipoMatricula=strClean($_POST['listTipoEstudiante']);
+				$strFolio=strClean($_POST['txtFolio'] ?? '');
+				$strStatus=strClean($_POST['listStateInscripcion']);
+				$intIdMatricula=intval($_POST['idMatricula'] ?? 0);
+
+				$request_user="";
+
+				//Preguntamos si es nuevo registro o actualización 
+				if ($boolNew) {
+					if (empty($strCi)) {
+						$arrResponse=array("status"=>false,"msg"=>'El CI del estudiante es obligatorio.');
+						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+					}
+					if ($_SESSION['permisosMod']['w']) {
+						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+					}else {
+						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
+						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+					}
+				}else {
+					if ($intIdMatricula <= 0) {
+						$arrResponse=array("status"=>false,"msg"=>'ID de matrícula inválido para actualizar.');
+						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+					}
+					if ($_SESSION['permisosMod']['u']) {
+						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+					}else {
+						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
+						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+					}						
+				}
+
+				//Validamos si se logro insertar el resultado 
+				if ($request_user == "matricula_guardada") {
+					$arrResponse=array("status"=>true,"msg"=>'Matrícula registrada satisfactoriamente.');
+				}else if ($request_user == "matricula_actualizada") {
+					$arrResponse=array("status"=>true,"msg"=>'Matrícula actualizada satisfactoriamente.');
+				}else {
+					if ($request_user=="matricula_existente") {
+						$arrResponse=array("status"=>false,"msg"=>'La matrícula ya existe (estudiante ya matriculado en esa gestión).');
+					}else {
+						$arrResponse=array("status"=>false,"msg"=>'No es posible guardar datos: '.$request_user);
+					}
+				}
+				echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);
+				die();
+			}
+		}
+
+		// OBTENER UNA MATRÍCULA
+		public function getMatricula(int $idMatricula)
+		{
+			if ($_SESSION['permisosMod']['r']) {
+				$id = intval($idMatricula);
+				if ($id > 0) {
+					$arrData = $this->model->selectMatricula($id);
+					if (empty($arrData)) {
+						$arrResponse = array('status'=>false,'msg'=>'Datos no encontrados.');
+					}else{
+						$arrResponse = array('status'=>true,'data'=>$arrData);
+					}
+					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);
+				}
+			}
+			die();
+		}
+
+		// BAJA LÓGICA DE MATRÍCULA
+		public function delMatricula()
+		{
+			if ($_POST && $_SESSION['permisosMod']['d']) {
+				$intId = intval($_POST['idMatricula'] ?? 0);
+				if ($intId > 0 && $this->model->deleteMatricula($intId)) {
+					$arrResponse = array('status'=>true,'msg'=>'Matrícula dada de baja.');
+				}else{
+					$arrResponse = array('status'=>false,'msg'=>'Error al eliminar la matrícula.');
+				}
+				echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);
+			}
+			die();
+		}
+	}	
+
+?>

@@ -1,0 +1,131 @@
+/* ==========================================================================
+   TUTORES - tarjetas de vista completa (compartido: Estudiantes + Tutores)
+   Paleta: Azul #1a3b5d | Dorado #c4a35a
+   ========================================================================== */
+
+.tut-header {
+    background: linear-gradient(135deg, var(--marista-blue, #1a3b5d) 0%, var(--marista-blue-light, #2c5282) 100%);
+    color: #fff;
+}
+
+.tut-card {
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0,0,0,0.05));
+}
+
+.tut-card:last-child {
+    margin-bottom: 0;
+}
+
+.tut-avatar {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fff;
+    background: var(--marista-blue, #1a3b5d);
+    border: 2px solid var(--marista-gold, #c4a35a);
+}
+
+.tut-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.tut-nombre {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--marista-blue, #1a3b5d);
+    margin-bottom: 6px;
+}
+
+.tut-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-dark, #2c3e50);
+    margin-bottom: 4px;
+}
+
+.tut-row i {
+    color: var(--marista-gold-dark, #a88947);
+    width: 16px;
+    text-align: center;
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.tut-contacto {
+    margin: 8px 0;
+}
+
+.tut-contacto .btn {
+    margin: 0 4px 4px 0;
+}
+
+/* ---------- Toolbar ---------- */
+.tut-toolbar {
+    border-top: 3px solid var(--marista-gold, #c4a35a);
+}
+
+.est-resumen {
+    font-size: 0.85rem;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.est-resumen b {
+    color: var(--marista-blue, #1a3b5d);
+}
+
+/* ---------- Autocomplete de estudiantes ---------- */
+#modalFormTutores .form-group {
+    position: relative;
+}
+
+.tut-autocomplete {
+    position: absolute;
+    z-index: 1051;
+    background: #fff;
+    border: 1px solid var(--border-color, #e1e8ed);
+    border-radius: 0 0 8px 8px;
+    box-shadow: var(--shadow-md, 0 4px 8px rgba(0,0,0,0.1));
+    max-height: 240px;
+    overflow-y: auto;
+    width: calc(100% - 30px);
+}
+
+.tut-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.tut-opt:last-child {
+    border-bottom: none;
+}
+
+.tut-opt:hover {
+    background: #f4f7fa;
+}
+
+.tut-opt small {
+    display: block;
+}
+
+.tut-chip {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+}
