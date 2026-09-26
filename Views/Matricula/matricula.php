@@ -8,7 +8,10 @@
             <h1><i class="fas fa-user-tag"></i> <?= $data['page_title'] ?>
                 <?php if($_SESSION['permisosMod']['w']){ ?>
                 <button class="btn btn-primary" type="button" onclick="openModal();" ><i class="fas fa-plus-circle"></i> Matricular Estudiante</button>
-              <?php } ?>
+                <?php } ?>
+                <?php if(!empty($data['gestion_activa'])){ ?>
+                <span class="badge badge-success ml-2" id="badgeGestionActiva" data-gestion="<?= (int)$data['gestion_activa'] ?>"><i class="fa fa-calendar"></i> Gestión activa: <?= (int)$data['gestion_activa'] ?></span>
+                <?php } ?>
             </h1>
         </div>
         <ul class="app-breadcrumb breadcrumb">

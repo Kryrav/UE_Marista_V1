@@ -65,6 +65,10 @@
                     <input type="text" class="form-control" id="motivoEstado" name="motivoEstado" maxlength="255" placeholder="Ej. Traslado a UE San José, nota N°...">
                     <small class="form-text text-muted">Obligatorio en Retirado/Trasladado/Egresado.</small>
                 </div>
+                <div class="form-group col-md-12" id="boxMotivoRect" style="display:none;">
+                    <label for="motivoRectificacion">Motivo de rectificación * <small class="text-muted">(solo Admin/Dirección, fuera de gestión activa)</small></label>
+                    <input type="text" class="form-control" id="motivoRectificacion" name="motivoRectificacion" maxlength="255" placeholder="Ej. Registro extemporáneo 2024 autorizado por Dirección">
+                </div>
               </div>
               <div class="alert alert-warning py-2">
                 <div class="form-check mb-1">

@@ -20,7 +20,28 @@
 			$data['page_title'] = "Matrícula <small>Registro</small>";
 			$data['page_name'] = "Matrícula";
 			$data['page_functions_js'] = "functions_matricula.js";
+			// I2-addenda: gestión activa visible para la regla de matriculación
+			require_once("Models/GestionModel.php");
+			$gm = new GestionModel();
+			$act = $gm->selectGestionAct();
+			$data['gestion_activa'] = intval(is_array($act) ? ($act["gestion"] ?? 0) : 0);
 			$this->views->getView($this,"matricula",$data);
+		}
+
+		// I2-addenda: la matriculación opera sobre la gestión activa.
+		// Solo Admin (1) / Director (2) pueden rectificar otra gestión con motivo.
+		private function gestionActivaAnio(): int
+		{
+			require_once("Models/GestionModel.php");
+			$gm = new GestionModel();
+			$act = $gm->selectGestionAct();
+			return intval(is_array($act) ? ($act["gestion"] ?? 0) : 0);
+		}
+
+		private function puedeRectificarGestion(): bool
+		{
+			$rol = intval($_SESSION['userData']['idrol'] ?? 0);
+			return ($rol === 1 || $rol === 2);
 		}
 
 		// Stub legacy eliminado: usar insertNewMatricula / getMatricula / delMatricula
@@ -111,6 +132,8 @@
 					$arrResponse=array("status"=>false,"msg"=>'Indique el motivo del cambio a '.$strStatus.'.');
 					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
 				}
+				// I2-addenda: solo gestión activa, salvo rectificación Admin/Director con motivo
+				$motivoRect=strClean($_POST['motivoRectificacion'] ?? '');
 				// Documentación diferida (opcionales, no bloquean)
 				$docPend = !empty($_POST['chkDocPendiente']) || $strStatus === 'Pendiente_Documentos';
 				if($docPend){ $strStatus = 'Pendiente_Documentos'; }
@@ -135,10 +158,26 @@
 						$arrResponse=array("status"=>false,"msg"=>'El CI del estudiante es obligatorio.');
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
 					}
+					// I2-addenda: gestión activa obligatoria salvo rectificación autorizada
+					$gAct = $this->gestionActivaAnio();
+					$esRect = ($gAct > 0 && $intGestion !== $gAct);
+					if($esRect){
+						if(!$this->puedeRectificarGestion()){
+							$arrResponse=array("status"=>false,"msg"=>'Solo se matricula en la gestión activa ('.$gAct.'). Solicite rectificación a Dirección.');
+							echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+						}
+						if($motivoRect === ''){
+							$arrResponse=array("status"=>false,"msg"=>'Rectificación fuera de gestión activa: indique el motivo.');
+							echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+						}
+					}
 					if ($_SESSION['permisosMod']['w']) {
 						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
 						if($request_user == "matricula_guardada" && ($docPend || $plazo !== null)){
 							$this->model->setDocumentacionByCiGestion($strCi,$intGestion,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
+						}
+						if($request_user == "matricula_guardada" && $esRect){
+							$this->model->setMotivoByCiGestion($strCi,$intGestion,'Rectificación histórica: '.$motivoRect);
 						}
 					}else {
 						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
@@ -170,6 +209,7 @@
 				if ($request_user == "matricula_guardada") {
 					$msg='Matrícula registrada satisfactoriamente.';
 					if($docPend && $plazo){ $msg .= " Documentación pendiente hasta $plazo (30 días hábiles)."; }
+					if(!empty($esRect)){ $msg .= ' (Rectificación fuera de gestión activa, con motivo registrado).'; }
 					$arrResponse=array("status"=>true,"msg"=>$msg);
 				}else if ($request_user == "matricula_actualizada") {
 					$arrResponse=array("status"=>true,"msg"=>'Matrícula actualizada satisfactoriamente.');
@@ -234,6 +274,17 @@
 				if($ci === '' || $gestion < 2000 || $gestion > 2100 || $paralelo <= 0){
 					echo json_encode(array("status"=>false,"msg"=>'Datos incompletos: CI, gestión válida y paralelo.'),JSON_UNESCAPED_UNICODE);die();
 				}
+				// I2-addenda: destino = gestión activa, salvo rectificación autorizada
+				$gAct = $this->gestionActivaAnio();
+				if($gAct > 0 && $gestion !== $gAct){
+					$motivoRect = strClean($_POST['motivoRectificacion'] ?? '');
+					if(!$this->puedeRectificarGestion()){
+						echo json_encode(array("status"=>false,"msg"=>'Solo se rematricula en la gestión activa ('.$gAct.').'),JSON_UNESCAPED_UNICODE);die();
+					}
+					if($motivoRect === ''){
+						echo json_encode(array("status"=>false,"msg"=>'Rectificación fuera de gestión activa: indique el motivo.'),JSON_UNESCAPED_UNICODE);die();
+					}
+				}
 				if($tipo === ''){ $tipo = 'Regular'; }
 				$last = $this->model->ultimaMatriculaByCi($ci);
 				if(empty($last)){
@@ -241,6 +292,9 @@
 				}
 				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', 'Inscrito');
 				if($res == "matricula_guardada"){
+					if($gAct > 0 && $gestion !== $gAct){
+						$this->model->setMotivoByCiGestion($ci, $gestion, 'Rectificación histórica: '.strClean($_POST['motivoRectificacion'] ?? ''));
+					}
 					echo json_encode(array("status"=>true,"msg"=>"Rematriculado en gestión $gestion (10 pensiones generadas). Curso anterior: ".($last['curso'] ?? '—')."."),JSON_UNESCAPED_UNICODE);
 				}elseif($res == "matricula_existente"){
 					echo json_encode(array("status"=>false,"msg"=>'Ya está matriculado en esa gestión.'),JSON_UNESCAPED_UNICODE);

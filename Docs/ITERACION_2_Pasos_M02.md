@@ -39,4 +39,5 @@ Corrección en dos capas (sin cambio en ruta feliz):
 - [x] Backup PRE-M02 (759 KB) + POST-M02 (761 KB) en `Backups/M02_2026-09-26_Rematriculacion-Estados/`.
 - [x] Migración aplicada (columna + 4 SPs, EXIT 0). Verificado `motivo_estado YES`.
 - [x] `php -l` + `node --check` OK. TEST M02 OK sin restos (`left TEST=0`).
+- [x] Addenda gestión activa (sin migración, sin backup adicional): `insertNewMatricula` y `rematricular` exigen la gestión activa; override solo Admin/Director con `motivoRectificacion` (se guarda como `Rectificación histórica: …` en `motivo_estado`). TEST `test_m02b_gestion.php`: no-admin bloqueado, admin sin motivo bloqueado, admin con motivo OK (10 pensiones + motivo), remat no-admin bloqueado, vía activa intacta. Sin restos.
 - [ ] Prueba Secretaría en UI (ver Manual v1.2 §4 y §7).

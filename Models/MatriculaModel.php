@@ -131,6 +131,23 @@
             } catch (Exception $e) { return false; }
         }
 
+        // I2-addenda: nota de rectificación histórica (override fuera de gestión activa).
+        // Reutiliza motivo_estado para que sea visible en tabla/ficha (tooltip).
+        public function setMotivoByCiGestion(string $ci, int $gestion, string $motivo)
+        {
+            try {
+                $ok = $this->update(
+                    "UPDATE matricula SET motivo_estado = ? WHERE id_matricula = (
+                        SELECT id_matricula FROM (SELECT m.id_matricula FROM matricula m
+                         INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+                         INNER JOIN persona p ON e.id_persona = p.id_persona
+                         WHERE p.ci = ? AND m.gestion = ? ORDER BY m.id_matricula DESC LIMIT 1) t)",
+                    [$motivo, $ci, $gestion]
+                );
+                return $ok ? true : false;
+            } catch (Exception $e) { return false; }
+        }
+
         // Actualizar matrícula existente (no regenera pensiones)
         // ITERACIÓN 2: motivo_estado opcional (M02, tolerante si la columna no existe).
         public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '')

@@ -44,6 +44,7 @@ Resultado: `Estudiante registrado... Matriculado en gestión 2026... Documentaci
 
 `Matrícula > Matricular Estudiante`: `C.I. + Año lectivo + Curso + Tipo + Folio (opcional) + Confirmación [Confirmado/Inscrito/Pendiente de documentos]`.
 Si elige Pendiente, complete checklist + `Plazo hasta` (vacío = auto 30 hábiles) + `Compromiso` + observación. Un estudiante = una matrícula por gestión (si repite, avisa `ya matriculado`).
+**Regla:** solo se matricula en la **gestión activa** (ver badge verde). Si necesita otra gestión (registro extemporáneo), solo **Admin/Dirección** con **motivo de rectificación** obligatorio, que queda registrado y visible en la fila.
 
 ## 4B. Rematricular al año siguiente (NUEVO M02)
 
@@ -97,7 +98,7 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
-- v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario).
+- v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario). Addenda: matriculación/rematriculación solo en gestión activa salvo rectificación Admin/Dirección con motivo.
 - v1.1 2026-09-26 M01: diferibles, pendiente 30h, checklist, badges, plazo auto.
 - v1.0 Base: alta 3 pasos, matrícula, ficha, tutores, legajo.
 - Próximo M02: rematriculación en 1 clic + Retirado/Trasladado/Egresado. M03: rezago, discapacidad, comprobante matrícula.

@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 fd.append('gestion', document.querySelector('#intGestion').value.trim());
                 fd.append('paralelo', document.querySelector('#listParalelos').value);
                 fd.append('tipo', document.querySelector('#listTipoEstudiante').value);
+                let mr = document.querySelector('#motivoRectificacion');
+                if(mr){ fd.append('motivoRectificacion', mr.value.trim()); }
                 request.open("POST", base_url+'/Matricula/rematricular/', true);
                 request.send(fd);
             }else{
@@ -135,9 +137,11 @@ function openModal()
     document.querySelector('#titleModal').innerHTML = "Nueva Matrícula";
     document.querySelector('#btnText').innerHTML = "Matricular Estudiante";
     let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+    let mr0 = document.querySelector('#motivoRectificacion'); if(mr0) mr0.value = "";
     let year = new Date().getFullYear();
     document.querySelector('#intGestion').value = year;
     fntListParalelos(year);
+    toggleRectBox();
     $('#modalFormMatricula').modal('show');
 }
 
@@ -166,7 +170,9 @@ function fntRematricular(ci){
             document.querySelector('#listTipoEstudiante').value = d.tipo_matricula || 'Regular';
             document.querySelector('#listStateInscripcion').value = 'Inscrito';
             let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+            let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
             fntListParalelos(dest);
+            toggleRectBox();
             swal("Rematriculación", "Última: gestión " + d.gestion + " · " + (d.curso || 'sin curso') + " · " + d.estado_inscripcion + ". Elija el nuevo paralelo.", "info");
             $('#modalFormMatricula').modal('show');
         }
@@ -289,6 +295,10 @@ function fntDelMatricula(idMatricula){
             if(chk){ chk.checked = (e.target.value === 'Pendiente_Documentos'); }
             toggleMotivoBox();
         }
+        // I2-addenda: al cambiar el año, evaluar rectificación
+        if(e.target && e.target.id === 'intGestion'){
+            toggleRectBox();
+        }
     });
 
 function toggleMotivoBox(){
@@ -297,6 +307,21 @@ function toggleMotivoBox(){
     if(!sel || !box) return;
     let v = sel.value;
     box.style.display = (v === 'Retirado' || v === 'Trasladado' || v === 'Egresado') ? '' : 'none';
+    toggleRectBox();
+}
+
+// I2-addenda: motivo de rectificación si la gestión difiere de la activa
+function gestionActiva(){
+    let b = document.querySelector('#badgeGestionActiva');
+    return b ? parseInt(b.dataset.gestion || '0') : 0;
+}
+function toggleRectBox(){
+    let box = document.querySelector('#boxMotivoRect');
+    let inp = document.querySelector('#intGestion');
+    if(!box || !inp) return;
+    let g = parseInt(inp.value || '0');
+    let a = gestionActiva();
+    box.style.display = (a > 0 && g > 0 && g !== a) ? '' : 'none';
 }
 window.addEventListener('load', function() {
         fntListParalelos();
