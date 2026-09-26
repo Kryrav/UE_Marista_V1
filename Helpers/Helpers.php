@@ -908,6 +908,83 @@ function jsonSuccess(string $message, array $data = [], int $status_code = 200):
 }
 
 // ============================================================================
+// ITERACIÓN 1 — Documentación diferida 30 días hábiles (Bolivia)
+// ============================================================================
+
+/**
+ * Calcula fecha de vencimiento sumando N días hábiles (lun-vie).
+ * No rompe nada existente: función nueva, pura.
+ */
+function plazo30Habiles(?string $desde = null, int $dias = 30): string
+{
+    $d = $desde ? new DateTime($desde) : new DateTime('now');
+    $sum = 0;
+    while ($sum < $dias) {
+        $d->modify('+1 day');
+        $w = (int)$d->format('N'); // 1-5 hábil
+        if ($w <= 5) { $sum++; }
+    }
+    return $d->format('Y-m-d');
+}
+
+/**
+ * Días hábiles restantes hasta el plazo (negativo = vencido).
+ */
+function diasHabilesRestantes(string $plazoYmd): int
+{
+    $hoy = new DateTime('today');
+    $fin = new DateTime($plazoYmd);
+    if ($fin < $hoy) {
+        // cuenta vencidos como negativos
+        $c = 0; $d = clone $fin;
+        while ($d < $hoy) { $d->modify('+1 day'); if ((int)$d->format('N') <= 5) { $c++; } }
+        return -$c;
+    }
+    $c = 0; $d = clone $hoy;
+    while ($d < $fin) { $d->modify('+1 day'); if ((int)$d->format('N') <= 5) { $c++; } }
+    return $c;
+}
+
+/**
+ * Catálogo oficial de documentos mínimos exigibles.
+ */
+function docsCatalogo(): array
+{
+    return ['ci', 'cert_nac', 'rude', 'solicitud'];
+}
+
+/**
+ * Normaliza checklist docs_checklist (JSON/TEXT) a array seguro.
+ */
+function docsChecklistDecode($raw): array
+{
+    if (empty($raw)) { return []; }
+    if (is_array($raw)) { return $raw; }
+    $a = json_decode((string)$raw, true);
+    return is_array($a) ? $a : [];
+}
+
+function docsChecklistEncode(array $a): string
+{
+    $base = array_fill_keys(docsCatalogo(), 0);
+    foreach ($a as $k => $v) {
+        if (isset($base[$k])) { $base[$k] = $v ? 1 : 0; }
+    }
+    return json_encode($base, JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * ¿La matrícula está pendiente de documentos?
+ */
+function esPendienteDocs(array $mat): bool
+{
+    $e = strtolower(trim($mat['estado_inscripcion'] ?? ''));
+    if ($e === 'pendiente_documentos' || $e === 'pendiente docs') { return true; }
+    // Compat: si hay plazo futuro y no Confirmado, también se considera pendiente
+    return !empty($mat['plazo_documentos_hasta']);
+}
+
+// ============================================================================
 // INICIALIZACIÓN (si es necesario)
 // ============================================================================
 

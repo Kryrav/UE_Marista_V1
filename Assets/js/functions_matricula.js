@@ -138,7 +138,10 @@ function fntViewMatricula(idMatricula){
             let objData = JSON.parse(request.responseText);
             if(objData.status){
                 let d = objData.data;
-                swal("Matrícula "+d.id_matricula, "Estudiante: "+d.nombre_estudiante+" "+d.apellido_estudiante+" ("+d.ci_estudiante+") | Gestión: "+d.gestion+" | Tipo: "+d.tipo_matricula+" | "+d.estado_inscripcion, "info");
+                let extra = d.estado_inscripcion;
+                if(d.plazo_documentos_hasta){ extra += " | Plazo docs: " + d.plazo_documentos_hasta; }
+                if(d.compromiso_firmado == 1){ extra += " | Compromiso: sí"; }
+                swal("Matrícula "+d.id_matricula, "Estudiante: "+d.nombre_estudiante+" "+d.apellido_estudiante+" ("+d.ci_estudiante+") | Gestión: "+d.gestion+" | Tipo: "+d.tipo_matricula+" | "+extra, "info");
             }else{
                 swal("Error", objData.msg, "error");
             }
@@ -166,6 +169,21 @@ function fntEditMatricula(element, idMatricula){
                 document.querySelector('#txtFolio').value = d.folio || "";
                 document.querySelector('#listTipoEstudiante').value = d.tipo_matricula;
                 document.querySelector('#listStateInscripcion').value = d.estado_inscripcion;
+                // ITERACIÓN 1: precarga documental
+                let chk = document.querySelector('#chkDocPendiente');
+                if(chk){ chk.checked = (d.estado_inscripcion === 'Pendiente_Documentos'); }
+                let plz = document.querySelector('#plazoDocs');
+                if(plz){ plz.value = d.plazo_documentos_hasta || ""; }
+                try {
+                    let docs = d.docs_checklist ? JSON.parse(d.docs_checklist) : null;
+                    if(docs){
+                        let c1 = document.querySelector('#modalFormMatricula [name="doc_cert_nac"]'); if(c1) c1.checked = !!docs.cert_nac;
+                        let c2 = document.querySelector('#modalFormMatricula [name="doc_rude"]'); if(c2) c2.checked = !!docs.rude;
+                        let c3 = document.querySelector('#modalFormMatricula [name="doc_solicitud"]'); if(c3) c3.checked = !!docs.solicitud;
+                    }
+                    let cc = document.querySelector('#chkCompromiso'); if(cc && d.compromiso_firmado != null) cc.checked = (d.compromiso_firmado == 1);
+                    let ob = document.querySelector('#modalFormMatricula [name="docsObs"]'); if(ob) ob.value = d.docs_observacion || "";
+                } catch(e){}
                 fntListParalelos(d.gestion, d.id_paralelo);
                 $('#modalFormMatricula').modal('show');
             }else{
@@ -209,6 +227,17 @@ function fntDelMatricula(idMatricula){
 }
 
     //FUNCIONES DEL SISTEMA -
+    // ITERACIÓN 1: sincroniza check Pendiente <-> select estado
+    document.addEventListener('change', function(e){
+        if(e.target && e.target.id === 'chkDocPendiente'){
+            let sel = document.querySelector('#listStateInscripcion');
+            if(sel && e.target.checked){ sel.value = 'Pendiente_Documentos'; }
+        }
+        if(e.target && e.target.id === 'listStateInscripcion'){
+            let chk = document.querySelector('#chkDocPendiente');
+            if(chk){ chk.checked = (e.target.value === 'Pendiente_Documentos'); }
+        }
+    });
 window.addEventListener('load', function() {
         fntListParalelos();
         

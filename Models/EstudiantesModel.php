@@ -56,6 +56,7 @@
     }
 
     // Pre-chequeo de duplicados con mensaje específico. $excludeIdEstudiante=null en insert.
+    // ITERACIÓN 1: cel/email/rude son DIFERIBLES — solo se validan si traen valor.
     public function checkDuplicados(string $ci, string $cel, string $email, string $rude, $excludeIdEstudiante = null, $folio = null)
     {
       $excPersona = null;
@@ -67,18 +68,27 @@
       $p = [$ci];
       if($excPersona){ $q .= " AND id_persona != ?"; $p[] = $excPersona; }
       if($this->select($q, $p)){ return "El CI ya está registrado en otro estudiante."; }
-      $q = "SELECT id_persona FROM persona WHERE cel = ?";
-      $p = [$cel];
-      if($excPersona){ $q .= " AND id_persona != ?"; $p[] = $excPersona; }
-      if($this->select($q, $p)){ return "El celular ya está registrado en otro usuario."; }
-      $q = "SELECT id_persona FROM persona WHERE email = ?";
-      $p = [$email];
-      if($excPersona){ $q .= " AND id_persona != ?"; $p[] = $excPersona; }
-      if($this->select($q, $p)){ return "El email ya está registrado en otro usuario."; }
-      $q = "SELECT id_estudiante FROM estudiante WHERE rude = ?";
-      $p = [$rude];
-      if($excludeIdEstudiante){ $q .= " AND id_estudiante != ?"; $p[] = $excludeIdEstudiante; }
-      if($this->select($q, $p)){ return "El RUDE ya está registrado en otro estudiante."; }
+      $cel = trim($cel ?? '');
+      if($cel !== ''){
+        $q = "SELECT id_persona FROM persona WHERE cel = ?";
+        $p = [$cel];
+        if($excPersona){ $q .= " AND id_persona != ?"; $p[] = $excPersona; }
+        if($this->select($q, $p)){ return "El celular ya está registrado en otro usuario."; }
+      }
+      $email = trim(strtolower($email ?? ''));
+      if($email !== ''){
+        $q = "SELECT id_persona FROM persona WHERE email = ?";
+        $p = [$email];
+        if($excPersona){ $q .= " AND id_persona != ?"; $p[] = $excPersona; }
+        if($this->select($q, $p)){ return "El email ya está registrado en otro usuario."; }
+      }
+      $rude = trim($rude ?? '');
+      if($rude !== ''){
+        $q = "SELECT id_estudiante FROM estudiante WHERE rude = ?";
+        $p = [$rude];
+        if($excludeIdEstudiante){ $q .= " AND id_estudiante != ?"; $p[] = $excludeIdEstudiante; }
+        if($this->select($q, $p)){ return "El RUDE ya está registrado en otro estudiante."; }
+      }
       if($folio !== null && $folio !== ""){
         $q = "SELECT id_estudiante FROM estudiante WHERE folio_fisico = ?";
         $p = [(int)$folio];
@@ -109,15 +119,26 @@
 
     public function insertEstudiante(string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null)
     {
+      // ITERACIÓN 1: diferibles "" -> NULL; usuario fallback = email o CI
+      $strTelefono = trim($strTelefono ?? ''); if($strTelefono === ''){ $strTelefono = null; }
+      $strEmail = trim(strtolower($strEmail ?? '')); if($strEmail === ''){ $strEmail = null; }
+      $strRUDE = trim($strRUDE ?? ''); if($strRUDE === ''){ $strRUDE = null; }
+      $strDireccion = trim($strDireccion ?? ''); if($strDireccion === ''){ $strDireccion = null; }
+      $strColegioProc = trim($strColegioProc ?? ''); if($strColegioProc === ''){ $strColegioProc = null; }
+      $strProvincia = trim($strProvincia ?? ''); if($strProvincia === ''){ $strProvincia = null; }
+      $strCiudad = trim($strCiudad ?? ''); if($strCiudad === ''){ $strCiudad = null; }
+      if(trim($strPais ?? '') === ''){ $strPais = 'Bolivia'; }
+      $strEmergencia = trim($strEmergencia ?? ''); if($strEmergencia === ''){ $strEmergencia = null; }
+      $strUsuario = ($strEmail !== null && $strEmail !== '') ? $strEmail : $strCi;
       if($folio === null || $folio === ""){ $folio = $this->nextFolio(); $auto = true; } else { $folio = (int)$folio; $auto = false; }
-      $dup = $this->checkDuplicados($strCi, $strTelefono, $strEmail, $strRUDE, null, $folio);
+      $dup = $this->checkDuplicados($strCi, (string)($strTelefono ?? ''), (string)($strEmail ?? ''), (string)($strRUDE ?? ''), null, $folio);
       if($dup){ return "exist:".$dup; }
       // Reintentos ante carrera por el folio (UNIQUE como guarda final)
       for($try = 0; $try < 3; $try++){
         try {
             $sql = "CALL sp_registrar_estudiante(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
             $arrData = array($strCi, $strNombre, $strApellido, $strSex, $strDireccion, $strTelefono,
-                $strEmail, $strEmail, $strPassword, $intTipoId, $strColegioProc, $strRUDE,
+                $strEmail, $strUsuario, $strPassword, $intTipoId, $strColegioProc, $strRUDE,
                 $strProvincia, $strCiudad, $strPais, $dateFNacimiento, $strEmergencia,
                 $strlistEst, $intStatus, $strFoto, $folio, $estante, $gaveta, $estadoLegajo);
             $request_insert = $this->insert($sql, $arrData);
@@ -142,6 +163,9 @@
 
     public function updateEstudiante(int $idStudent, string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null)
     {
+      // ITERACIÓN 1: diferibles "" -> NULL (conservar si no se envían en edición parcial)
+      $norm = function($v){ $v = trim((string)($v ?? '')); return $v === '' ? null : $v; };
+      // No forzar NULL aquí para no pisar: checkDuplicados ya ignora vacíos
       $dup = $this->checkDuplicados($strCi, $strTelefono, $strEmail, $strRUDE, $idStudent, $folio);
       if($dup){ return "exist:".$dup; }
       // Si no se digitó clave nueva, conservar el hash actual (no resetear acceso)
@@ -165,11 +189,14 @@
         if($estadoLegajo === null){ $estadoLegajo = $row["estado_legajo"] ?? null; }
       } else { $folio = (int)$folio; }
       try {
+          // ITERACIÓN 1: usuario fallback = email o CI (no dejar "" que rompe login)
+          $strUsuarioUpd = trim((string)$strEmail);
+          if($strUsuarioUpd === ''){ $strUsuarioUpd = $strCi; }
           $sql = "CALL updateEstudiante(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
           $arrData = array($idStudent, $strCi, $strRUDE, $strlistEst, $strNombre, $strApellido,
               $strSex, $strTelefono, $strEmail, $strDireccion, $dateFNacimiento, $strPais,
               $strCiudad, $strProvincia, $strColegioProc, $strEmergencia, $intTipoId,
-              $strPassword, $strEmail, $intStatus, $strFoto, $folio, $estante, $gaveta, $estadoLegajo);
+              $strPassword, $strUsuarioUpd, $intStatus, $strFoto, $folio, $estante, $gaveta, $estadoLegajo);
           $request = $this->update($sql, $arrData);
           if ($request) {
             // Intencionalmente NO se toca persona.status: el estado académico

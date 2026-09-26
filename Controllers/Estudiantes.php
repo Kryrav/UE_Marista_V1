@@ -56,16 +56,22 @@
 
 		private function validar(array $p, bool $isNew)
 		{
+			// ITERACIÓN 1 (N-01/N-07): duros mínimos para inscribir todo el año;
+			// RUDE/email/celular son DIFERIBLES a 30 días hábiles (no bloquean).
 			$req = [
-				'txtCi'=>'El C.I. es obligatorio.', 'txtRUDE'=>'El RUDE es obligatorio.',
+				'txtCi'=>'El C.I. es obligatorio.',
 				'txtNombre'=>'El nombre es obligatorio.', 'txtApellido'=>'El apellido es obligatorio.',
-				'txtCelular'=>'El celular es obligatorio.', 'txtEmail'=>'El email es obligatorio.',
 				'dateFNacimiento'=>'La fecha de nacimiento es obligatoria.'
 			];
-			foreach($req as $c=>$msg){ if(empty($p[$c])){ return $msg; } }
-			if(!filter_var(strtolower(trim($p['txtEmail'])), FILTER_VALIDATE_EMAIL)){ return 'El email no tiene un formato válido.'; }
-			$cel = preg_replace('/[^0-9]/','', $p['txtCelular']);
-			if(strlen($cel) < 7 || strlen($cel) > 9){ return 'El celular debe tener entre 7 y 9 dígitos.'; }
+			foreach($req as $c=>$msg){ if(empty(trim($p[$c] ?? ''))){ return $msg; } }
+			// Diferibles: solo se validan si vienen con valor
+			$em = trim(strtolower($p['txtEmail'] ?? ''));
+			if($em !== '' && !filter_var($em, FILTER_VALIDATE_EMAIL)){ return 'El email no tiene un formato válido.'; }
+			$celRaw = trim($p['txtCelular'] ?? '');
+			if($celRaw !== ''){
+				$cel = preg_replace('/[^0-9]/','', $celRaw);
+				if(strlen($cel) < 7 || strlen($cel) > 9){ return 'El celular debe tener entre 7 y 9 dígitos.'; }
+			}
 			$fn = strtotime($p['dateFNacimiento']);
 			if($fn === false){ return 'Fecha de nacimiento inválida.'; }
 			if($fn > time()){ return 'La fecha de nacimiento no puede ser futura.'; }
@@ -163,6 +169,7 @@
 		}
 
 		// Matricula inmediata tras crear (usa gestión activa + paralelo elegido)
+		// ITERACIÓN 1: soporta Documentación pendiente 30 días hábiles (N-01/F-06).
 		private function matricularNuevo(string $ci, array $post)
 		{
 			if(empty($_SESSION['permisosMod']['w'])){ return ' (Sin permiso para matricular.)'; }
@@ -174,8 +181,27 @@
 			$idParalelo = intval($post['listParaleloMat'] ?? 0);
 			if($idParalelo <= 0){ return ' (Estudiante creado, pero seleccione un paralelo para matricular.)'; }
 			$mm = new MatriculaModel();
-			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', 'Confirmado');
-			if($res == "matricula_guardada"){ return " Matriculado en gestión $gestion (10 pensiones generadas)."; }
+			// ¿Faltan diferibles? -> sugerir pendiente aunque no marquen el check
+			$faltaDif = (trim($post['txtRUDE'] ?? '') === '' || trim($post['txtEmail'] ?? '') === '' || trim($post['txtCelular'] ?? '') === '');
+			$docPend = !empty($post['chkDocPendiente']) || $faltaDif;
+			$estado = $docPend ? 'Pendiente_Documentos' : 'Confirmado';
+			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', $estado);
+			if($res == "matricula_guardada"){
+				$extra = "";
+				if($docPend){
+					$plazo = function_exists('plazo30Habiles') ? plazo30Habiles() : date('Y-m-d', strtotime('+30 days'));
+					$chk = [
+						'ci' => 1, // CI siempre presente (duro)
+						'cert_nac' => !empty($post['doc_cert_nac']) ? 1 : 0,
+						'rude' => (trim($post['txtRUDE'] ?? '') !== '' ? 1 : (!empty($post['doc_rude']) ? 1 : 0)),
+						'solicitud' => !empty($post['doc_solicitud']) ? 1 : 0,
+					];
+					$comp = !empty($post['chkCompromiso']) || $docPend ? 1 : 0;
+					$mm->setDocumentacionByCiGestion($ci, $gestion, $plazo, $chk, $comp, strClean($post['docsObs'] ?? ''), $estado);
+					$extra = " Documentación pendiente hasta $plazo (30 días hábiles).";
+				}
+				return " Matriculado en gestión $gestion (10 pensiones generadas).$extra";
+			}
 			return " (No se pudo matricular: $res)";
 		}
 

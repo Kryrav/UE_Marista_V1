@@ -159,6 +159,17 @@ function validarPaso(n){
         }else if(el.value.trim() === ''){ ok = false; el.classList.add('is-invalid'); }
         else{ el.classList.remove('is-invalid'); }
     });
+    // ITERACIÓN 1: diferibles opcionales — solo formato si vienen con valor
+    if(n === 1){
+        let em = document.querySelector('#txtEmail');
+        if(em && em.value.trim() !== '' && em.value.indexOf('@') < 0){ ok = false; em.classList.add('is-invalid'); }
+        let ce = document.querySelector('#txtCelular');
+        if(ce && ce.value.trim() !== ''){
+            let d = ce.value.replace(/[^0-9]/g, '');
+            if(d.length < 7 || d.length > 9){ ok = false; ce.classList.add('is-invalid'); }
+            else{ ce.classList.remove('is-invalid'); }
+        }
+    }
     return ok;
 }
 
@@ -257,6 +268,13 @@ function openModal()
     document.querySelector('#boxMatricular').style.display = '';
     document.querySelector('#chkMatricular').checked = true;
     document.querySelector('.est-steps li[data-step="3"]').style.display = '';
+    // ITERACIÓN 1: reset documental
+    let cd = document.querySelector('#chkDocPendiente'); if(cd) cd.checked = false;
+    ['doc_cert_nac','doc_rude','doc_solicitud'].forEach(function(n){
+        let el = document.querySelector('#formEstudiante [name="'+n+'"]'); if(el) el.checked = false;
+    });
+    let cc = document.querySelector('#chkCompromiso'); if(cc) cc.checked = true;
+    let ob = document.querySelector('#docsObs'); if(ob) ob.value = "";
     paralelosCargados = false;
     wizardGo(1);
     $('#modalFormEstudiantes').modal('show');

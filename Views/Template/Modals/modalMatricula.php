@@ -54,10 +54,30 @@
                     <select class="form-control selectpicker" id="listStateInscripcion" name="listStateInscripcion" required >
                         <option value="Confirmado">Confirmado</option>
                         <option value="Inscrito">Inscrito</option>
+                        <option value="Pendiente_Documentos">Pendiente de documentos (30 días hábiles)</option>
                     </select>
                 </div>
-                
-             </div>
+              </div>
+              <div class="alert alert-warning py-2">
+                <div class="form-check mb-1">
+                  <input type="checkbox" class="form-check-input" id="chkDocPendiente" name="chkDocPendiente" value="1">
+                  <label class="form-check-label" for="chkDocPendiente"><strong>Documentación pendiente</strong> — no bloquea la inscripción.</label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-md-6 mb-1">
+                    <label class="mb-1">Checklist entregado</label>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" name="doc_cert_nac" value="1"><label class="form-check-label">Cert. nacimiento</label></div>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" name="doc_rude" value="1"><label class="form-check-label">RUDE</label></div>
+                    <div class="form-check"><input type="checkbox" class="form-check-input" name="doc_solicitud" value="1"><label class="form-check-label">Solicitud</label></div>
+                  </div>
+                  <div class="form-group col-md-6 mb-1">
+                    <label for="plazoDocs">Plazo hasta (auto 30 días hábiles si vacío)</label>
+                    <input type="date" class="form-control" id="plazoDocs" name="plazoDocs">
+                    <div class="form-check mt-2"><input type="checkbox" class="form-check-input" id="chkCompromiso" name="chkCompromiso" value="1" checked><label class="form-check-label" for="chkCompromiso">Compromiso firmado</label></div>
+                    <input type="text" class="form-control form-control-sm mt-2" name="docsObs" placeholder="Observación (opcional)">
+                  </div>
+                </div>
+              </div>
              <div class="tile-footer">
                 <button id="btnActionForm" class="btn btn-primary" type="submit"><i class="fa fa-fw fa-lg fa-check-circle"></i><span id="btnText">Matricular Estudiante</span></button>&nbsp;&nbsp;&nbsp;
                 <button class="btn btn-danger" type="button" data-dismiss="modal"><i class="fa fa-fw fa-lg fa-times-circle"></i>Cerrar</button>

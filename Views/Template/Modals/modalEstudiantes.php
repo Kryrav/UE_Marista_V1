@@ -31,8 +31,8 @@
                     <input type="text" class="form-control" id="txtCi" name="txtCi" required="">
                   </div>
                   <div class="form-group col-md-6">
-                    <label for="txtRUDE">RUDE *</label>
-                    <input type="text" class="form-control" id="txtRUDE" name="txtRUDE" required="">
+                    <label for="txtRUDE">RUDE <small class="text-muted">(diferible 30 días hábiles)</small></label>
+                    <input type="text" class="form-control" id="txtRUDE" name="txtRUDE" placeholder="Se puede completar después">
                   </div>
                 </div>
                 <div class="form-row">
@@ -58,14 +58,14 @@
                     <input type="date" class="form-control" id="dateFNacimiento" name="dateFNacimiento" required="">
                   </div>
                   <div class="form-group col-md-4">
-                    <label for="txtCelular">Nº Celular *</label>
-                    <input type="text" class="form-control" id="txtCelular" name="txtCelular" required="">
+                    <label for="txtCelular">Nº Celular <small class="text-muted">(diferible)</small></label>
+                    <input type="text" class="form-control" id="txtCelular" name="txtCelular" placeholder="7-9 dígitos, si se conoce">
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group col-md-6">
-                    <label for="txtEmail">Email *</label>
-                    <input type="email" class="form-control" id="txtEmail" name="txtEmail" required="">
+                    <label for="txtEmail">Email <small class="text-muted">(diferible)</small></label>
+                    <input type="email" class="form-control" id="txtEmail" name="txtEmail" placeholder="Se puede completar después">
                   </div>
                   <div class="form-group col-md-6">
                       <label for="txtDireccion">Domicilio</label>
@@ -157,6 +157,24 @@
                   <div class="form-check mb-2">
                     <input type="checkbox" class="form-check-input" id="chkMatricular" name="chkMatricular" value="1" checked>
                     <label class="form-check-label" for="chkMatricular"><strong>Matricular de una vez</strong> <span class="text-muted" id="gestionMatLabel"></span></label>
+                  </div>
+                  <div class="alert alert-warning py-2">
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="chkDocPendiente" name="chkDocPendiente" value="1">
+                      <label class="form-check-label" for="chkDocPendiente"><strong>Documentación pendiente</strong> — se otorga plazo de 30 días hábiles (inscripción sin bloqueo, norma Bolivia).</label>
+                    </div>
+                    <div class="form-row mt-2">
+                      <div class="form-group col-md-4 mb-1">
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_cert_nac" name="doc_cert_nac" value="1"><label class="form-check-label" for="doc_cert_nac">Cert. nacimiento</label></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_rude" name="doc_rude" value="1"><label class="form-check-label" for="doc_rude">RUDE</label></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_solicitud" name="doc_solicitud" value="1"><label class="form-check-label" for="doc_solicitud">Solicitud</label></div>
+                      </div>
+                      <div class="form-group col-md-8 mb-1">
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="chkCompromiso" name="chkCompromiso" value="1" checked><label class="form-check-label" for="chkCompromiso">Compromiso firmado por apoderado</label></div>
+                        <input type="text" class="form-control form-control-sm mt-1" id="docsObs" name="docsObs" placeholder="Observación documental (opcional)">
+                        <small class="form-text text-muted">Si RUDE/email/celular están vacíos, se marca pendiente automáticamente.</small>
+                      </div>
+                    </div>
                   </div>
                   <div class="form-row">
                     <div class="form-group col-md-6">

@@ -1,0 +1,19 @@
+BACKUP PRE-MIGRACIÓN M01 — db_marista
+=====================================
+Fecha: 2026-09-26 (América/La_Paz)
+Servidor: MySQL 9.1.0 local (c:\wamp64\bin\mysql\mysql9.1.0\data, puerto 3306)
+BD: db_marista
+Archivo: db_marista_PRE-M01_2026-09-26.sql (750 KB aprox, 25 tablas, 35 procedures, 202 estudiantes, 332 matrículas)
+Comando usado:
+  "C:/wamp64/bin/mysql/mysql9.1.0/bin/mysqldump.exe" -h localhost -u root --routines --events --triggers --single-transaction db_marista > db_marista_PRE-M01_2026-09-26.sql
+
+Contenido: estructura + datos + SPs + triggers. Incluye rutinas (sp_registrar_estudiante 24p, updateEstudiante 25p, matricular_estudiante_y_generar_pensiones, listar_matriculas, etc).
+
+RESTAURAR (solo si la migración falla):
+1. phpMyAdmin > db_marista > Importar > elegir este .sql > Continuar.
+   O por consola:
+   "C:/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe" -h localhost -u root db_marista < db_marista_PRE-M01_2026-09-26.sql
+2. Verificar: SELECT COUNT(*) FROM estudiante; (debe dar 202) y SELECT COUNT(*) FROM matricula; (332).
+3. Avisar a Dirección/Secretaría que se revirtió a estado PRE-M01.
+
+NOTA: No borrar esta carpeta. Las siguientes migraciones (M02, M03...) crearán su propio backup PRE-Mxx en Backups/.

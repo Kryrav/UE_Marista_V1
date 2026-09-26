@@ -1,2 +1,6 @@
 # Excluir zips grandes de librerías (se mantienen localmente, no se suben al repo)
 *.zip
+
+# Backups con datos reales: solo local, jamás al repo (protección de datos de menores)
+Backups/*.sql
+Backups/**/*.sql

@@ -41,6 +41,20 @@
                     }else{
                         $arrData[$i]['estado_matricula'] = '<span class="badge badge-danger">Inactivo</span>';
                     }
+                    // ITERACIÓN 1: feedback visual de documentación pendiente (U-03/U-04)
+                    $ei = trim($arrData[$i]['estado_inscripcion'] ?? '');
+                    if($ei === 'Pendiente_Documentos'){
+                        $plazo = trim($arrData[$i]['plazo_documentos_hasta'] ?? '');
+                        $alerta = '';
+                        if($plazo !== '' && function_exists('diasHabilesRestantes')){
+                            try { $r = diasHabilesRestantes($plazo); $alerta = $r < 0 ? ' (vencido '.abs($r).'d)' : " ($r d)"; } catch(Exception $x){}
+                        }
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-warning" title="Plazo: '.htmlspecialchars($plazo).'">Pendiente docs'.$alerta.'</span>';
+                    }elseif($ei === 'Confirmado'){
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-success">Confirmado</span>';
+                    }elseif($ei === 'Inscrito'){
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-info">Inscrito</span>';
+                    }
 
                     if($_SESSION['permisosMod']['r']){
                         $btnView = '<button class="btn btn-info btn-sm btnViewMatricula" onClick="fntViewMatricula('.$arrData[$i]['id_matricula'].')" title="Ver Matrícula"><i class="far fa-eye"></i></button>';
@@ -60,6 +74,7 @@
 		}
 
 		// INSERTAR / ACTUALIZAR MATRÍCULA 
+		// ITERACIÓN 1: estado Pendiente_Documentos + plazo 30 días hábiles + checklist.
 		public function insertNewMatricula()
 		{
 			if ($_POST) {
@@ -76,6 +91,21 @@
 				$strFolio=strClean($_POST['txtFolio'] ?? '');
 				$strStatus=strClean($_POST['listStateInscripcion']);
 				$intIdMatricula=intval($_POST['idMatricula'] ?? 0);
+				// Documentación diferida (opcionales, no bloquean)
+				$docPend = !empty($_POST['chkDocPendiente']) || $strStatus === 'Pendiente_Documentos';
+				if($docPend){ $strStatus = 'Pendiente_Documentos'; }
+				$plazo = trim($_POST['plazoDocs'] ?? '');
+				if($docPend && $plazo === ''){
+					$plazo = function_exists('plazo30Habiles') ? plazo30Habiles() : date('Y-m-d', strtotime('+30 days'));
+				} elseif($plazo === ''){ $plazo = null; }
+				$chkDocs = [
+					'ci' => 1,
+					'cert_nac' => !empty($_POST['doc_cert_nac']) ? 1 : 0,
+					'rude' => !empty($_POST['doc_rude']) ? 1 : 0,
+					'solicitud' => !empty($_POST['doc_solicitud']) ? 1 : 0,
+				];
+				$comp = !empty($_POST['chkCompromiso']) ? 1 : ($docPend ? 1 : 0);
+				$obsDocs = strClean($_POST['docsObs'] ?? '');
 
 				$request_user="";
 
@@ -87,6 +117,9 @@
 					}
 					if ($_SESSION['permisosMod']['w']) {
 						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+						if($request_user == "matricula_guardada" && ($docPend || $plazo !== null)){
+							$this->model->setDocumentacionByCiGestion($strCi,$intGestion,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
+						}
 					}else {
 						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
@@ -98,6 +131,15 @@
 					}
 					if ($_SESSION['permisosMod']['u']) {
 						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+						if($request_user == "matricula_actualizada"){
+							// Si pasa a Confirmado y no es pendiente, se libera el plazo
+							if($strStatus === 'Pendiente_Documentos'){
+								$this->model->setDocumentacion($intIdMatricula,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
+							}else{
+								// Mantiene checklist pero libera plazo si ya completó
+								$this->model->setDocumentacion($intIdMatricula, null, $chkDocs, $comp, $obsDocs, $strStatus);
+							}
+						}
 					}else {
 						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
@@ -106,7 +148,9 @@
 
 				//Validamos si se logro insertar el resultado 
 				if ($request_user == "matricula_guardada") {
-					$arrResponse=array("status"=>true,"msg"=>'Matrícula registrada satisfactoriamente.');
+					$msg='Matrícula registrada satisfactoriamente.';
+					if($docPend && $plazo){ $msg .= " Documentación pendiente hasta $plazo (30 días hábiles)."; }
+					$arrResponse=array("status"=>true,"msg"=>$msg);
 				}else if ($request_user == "matricula_actualizada") {
 					$arrResponse=array("status"=>true,"msg"=>'Matrícula actualizada satisfactoriamente.');
 				}else {
