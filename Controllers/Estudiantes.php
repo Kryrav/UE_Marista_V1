@@ -82,6 +82,7 @@
 		// Insertar / actualizar Estudiante
 		public function setEstudiante(){
 			if(!$_POST){ die(); }
+			if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array("status"=>false,"msg"=>'Sesión expirada. Recargue la página e intente de nuevo.'), JSON_UNESCAPED_UNICODE); die(); }
 			$isNew = strClean($_POST['newStudent'] ?? '1') == "1";
 			if($err = $this->validar($_POST, $isNew)){
 				echo json_encode(array("status"=>false,"msg"=>$err), JSON_UNESCAPED_UNICODE); die();
@@ -367,6 +368,7 @@
 		public function saveInclusion()
 		{
 			if(!$_POST){ die(); }
+			if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'), JSON_UNESCAPED_UNICODE); die(); }
 			$idEst = intval($_POST['idEstudianteInc'] ?? 0);
 			if($idEst <= 0){ echo json_encode(array('status'=>false,'msg'=>'Estudiante inválido.'), JSON_UNESCAPED_UNICODE); die(); }
 			if(!$_SESSION['permisosMod']['u'] && !$_SESSION['permisosMod']['w']){ echo json_encode(array('status'=>false,'msg'=>'Sin permiso.'), JSON_UNESCAPED_UNICODE); die(); }
@@ -387,6 +389,7 @@
 		public function delEstudiante()
 		{
 			if($_POST && $_SESSION['permisosMod']['d']){
+				if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE); die(); }
 				$intIdEstudiante = intval($_POST['idEstudiante'] ?? 0);
 				if($intIdEstudiante <= 0){ echo json_encode(array('status'=>false,'msg'=>'ID inválido.'),JSON_UNESCAPED_UNICODE); die(); }
 				$requestDelete = $this->model->deleteEstudiante($intIdEstudiante);

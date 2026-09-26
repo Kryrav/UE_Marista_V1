@@ -12,6 +12,7 @@
             <form id="formEstudiante" name="formEstudiante" class="form-horizontal" enctype="multipart/form-data">
               <input type="hidden" id="idEstudiante" name="idEstudiante" value="">
               <input type="hidden" id="newStudent" name="newStudent" value="1">
+              <?= csrf_field(); ?>
               <ul class="est-steps">
                 <li class="active" data-step="1"><span>1</span> Personales</li>
                 <li data-step="2"><span>2</span> Académicos</li>

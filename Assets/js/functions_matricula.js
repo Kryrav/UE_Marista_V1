@@ -96,6 +96,8 @@ document.addEventListener('DOMContentLoaded', function(){
                 fd.append('tipo', document.querySelector('#listTipoEstudiante').value);
                 let mr = document.querySelector('#motivoRectificacion');
                 if(mr){ fd.append('motivoRectificacion', mr.value.trim()); }
+                let tk0 = document.querySelector('#formNewMatricula input[name="csrf_token"]');
+                if(tk0){ fd.append('csrf_token', tk0.value); }
                 request.open("POST", base_url+'/Matricula/rematricular/', true);
                 request.send(fd);
             }else{
@@ -270,6 +272,8 @@ function fntDelMatricula(idMatricula){
             let ajaxUrl = base_url+'/Matricula/delMatricula';
             let formData = new FormData();
             formData.append('idMatricula', idMatricula);
+            let tkd = document.querySelector('#formNewMatricula input[name="csrf_token"]');
+            if(tkd){ formData.append('csrf_token', tkd.value); }
             request.open("POST",ajaxUrl,true);
             request.send(formData);
             request.onreadystatechange = function(){

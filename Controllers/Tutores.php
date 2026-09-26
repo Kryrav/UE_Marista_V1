@@ -105,6 +105,7 @@
 		public function saveTutor()
 		{
 			if (!$_POST) { die(); }
+			if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE);die(); }
 			$idPadre = intval($_POST['idPadre'] ?? 0);
 			$idEstudiante = intval($_POST['listEstudiante'] ?? 0);
 			if($idEstudiante <= 0){ echo json_encode(array('status'=>false,'msg'=>'Seleccione el estudiante.'),JSON_UNESCAPED_UNICODE);die(); }
@@ -164,6 +165,7 @@
 		public function delTutor()
 		{
 			if ($_POST && $_SESSION['permisosMod']['d']) {
+				if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE); die(); }
 				$id = intval($_POST['idPadre'] ?? 0);
 				if($id > 0 && $this->model->deleteTutor($id)){ echo json_encode(array('status'=>true,'msg'=>'Tutor dado de baja.'),JSON_UNESCAPED_UNICODE); }
 				else{ echo json_encode(array('status'=>false,'msg'=>'Error al eliminar.'),JSON_UNESCAPED_UNICODE); }

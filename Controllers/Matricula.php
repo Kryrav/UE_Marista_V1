@@ -118,6 +118,7 @@
 		public function insertNewMatricula()
 		{
 			if ($_POST) {
+				if(!csrf_check($_POST['csrf_token'] ?? null)){ $arrResponse=array("status"=>false,"msg"=>'Sesión expirada. Recargue la página.'); echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die(); }
 				if (empty($_POST['intGestion'])||empty($_POST['listParalelos'])||empty($_POST['listTipoEstudiante'])||empty($_POST['listStateInscripcion'])||!isset($_POST['newG'])) {
 					$arrResponse=array("status"=>false,"msg"=>'No se recibieron los datos Correctamente');
 					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
@@ -271,6 +272,7 @@
 		public function rematricular()
 		{
 			if ($_POST) {
+				if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array("status"=>false,"msg"=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE);die(); }
 				if(!$_SESSION['permisosMod']['w']){
 					echo json_encode(array("status"=>false,"msg"=>'Sin permiso para rematricular.'),JSON_UNESCAPED_UNICODE);die();
 				}
@@ -337,6 +339,7 @@
 		public function delMatricula()
 		{
 			if ($_POST && $_SESSION['permisosMod']['d']) {
+				if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE); die(); }
 				$intId = intval($_POST['idMatricula'] ?? 0);
 				if ($intId > 0 && $this->model->deleteMatricula($intId)) {
 					$arrResponse = array('status'=>true,'msg'=>'Matrícula dada de baja.');

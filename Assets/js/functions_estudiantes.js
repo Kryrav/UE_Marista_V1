@@ -240,7 +240,8 @@ function fntDelEstudiante(idEstudiante){
             let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
             request.open("POST", base_url + '/Estudiantes/delEstudiante', true);
             request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send("idEstudiante=" + idEstudiante);
+            let tke = document.querySelector('#formEstudiante input[name="csrf_token"]');
+            request.send("idEstudiante=" + idEstudiante + (tke ? "&csrf_token=" + encodeURIComponent(tke.value) : ""));
             request.onreadystatechange = function(){
                 if(request.readyState == 4 && request.status == 200){
                     let objData = JSON.parse(request.responseText);
@@ -503,6 +504,8 @@ function fntSaveInclusion(idEstudiante, done){
     fd.append('centroEspecial', document.querySelector('#centroEspecial').value);
     fd.append('matParalela', document.querySelector('#matParalela').checked ? '1' : '');
     fd.append('reqComision', document.querySelector('#reqComision').checked ? '1' : '');
+    let tki = document.querySelector('#formEstudiante input[name="csrf_token"]');
+    if(tki){ fd.append('csrf_token', tki.value); }
     let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
     request.open("POST", base_url + '/Estudiantes/saveInclusion', true);
     request.send(fd);

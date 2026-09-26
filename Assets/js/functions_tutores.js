@@ -322,6 +322,7 @@ function fntDelTutor(id){
         if(isConfirm){
             let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
             let fd = new FormData(); fd.append('idPadre', id);
+            let tk = document.querySelector('input[name="csrf_token"]'); if(tk){ fd.append('csrf_token', tk.value); }
             request.open("POST", base_url+'/Tutores/delTutor', true);
             request.send(fd);
             request.onreadystatechange = function(){

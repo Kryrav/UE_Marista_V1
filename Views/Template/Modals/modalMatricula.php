@@ -13,6 +13,7 @@
             <form id="formNewMatricula" name="formNewMatricula" class="form-horizontal">
               <input type="hidden" id="newG" name="newG" value="1" required>
               <input type="hidden" id="idMatricula" name="idMatricula" value="0">
+              <?= csrf_field(); ?>
               <p class="text-primary">Todos los campos son obligatorios, excepto folio.</p>
 
               <div class="form-row">

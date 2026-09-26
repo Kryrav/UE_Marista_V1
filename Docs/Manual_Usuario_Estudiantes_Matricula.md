@@ -1,5 +1,5 @@
 # Manual de Usuario — Gestión de Estudiantes y Matrícula
-**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.3 (incluye M03 inclusión, rezago, comprobante)
+**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.4 (incluye M04 seguridad)
 **Usuarios:** Secretaría/Administración (uso diario), Dirección (aprueba), Regencia (cursos), Docentes tutores (consulta)
 
 > Este manual es vivo: cada cambio futuro (M02, M03...) agrega una sección al final y actualiza la portada. Último cambio: M01 2026-09-26.
@@ -100,6 +100,7 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
+- v1.4 2026-09-26 M04: protección anti-CSRF (sin cambio visible; si ve `Sesión expirada`, recargue la página).
 - v1.3 2026-09-26 M03: inclusión opcional, reporte de rezago, comprobante de matrícula, auditoría interna.
 - v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario). Addenda: matriculación/rematriculación solo en gestión activa salvo rectificación Admin/Dirección con motivo.
 - v1.1 2026-09-26 M01: diferibles, pendiente 30h, checklist, badges, plazo auto.

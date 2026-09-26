@@ -12,6 +12,7 @@
             <div class="tile-body">
             <form id="formTutor" name="formTutor" class="form-horizontal">
               <input type="hidden" id="idPadre" name="idPadre" value="0">
+              <?= csrf_field(); ?>
               <p class="text-primary">Datos del tutor / padre</p>
               <div class="form-row">
                 <div class="form-group col-md-4">
