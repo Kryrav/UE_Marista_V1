@@ -985,6 +985,29 @@ function esPendienteDocs(array $mat): bool
 }
 
 // ============================================================================
+// ITERACIÓN 2 — Catálogo de estados de inscripción + terminales
+// ============================================================================
+
+/**
+ * Catálogo oficial de estado_inscripcion (M01 + M02).
+ * Terminales preservan historial: no se borra la fila, solo cambia el estado.
+ */
+function estadosInscripcion(): array
+{
+    return ['Confirmado','Inscrito','Pendiente_Documentos','Retirado','Trasladado','Egresado'];
+}
+
+function esEstadoTerminal(string $estado): bool
+{
+    return in_array($estado, ['Retirado','Trasladado','Egresado'], true);
+}
+
+function esEstadoInscripcionValido(string $estado): bool
+{
+    return in_array($estado, estadosInscripcion(), true);
+}
+
+// ============================================================================
 // INICIALIZACIÓN (si es necesario)
 // ============================================================================
 

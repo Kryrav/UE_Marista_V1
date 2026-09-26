@@ -48,12 +48,14 @@
 
         // Obtener una matrícula por ID (con datos de estudiante y paralelo)
         // ITERACIÓN 1: incluye columnas documentales si existen (compat hacia atrás)
+        // ITERACIÓN 2: + motivo_estado (M02).
         public function selectMatricula(int $idMatricula)
         {
             try {
                 $sql = "SELECT m.id_matricula, m.gestion, m.id_paralelo, m.tipo AS tipo_matricula,
                                m.folio, m.estado_inscripcion, m.status AS estado_matricula,
                                m.plazo_documentos_hasta, m.docs_checklist, m.compromiso_firmado, m.docs_observacion,
+                               m.motivo_estado,
                                e.id_estudiante, p.ci AS ci_estudiante,
                                p.nombre AS nombre_estudiante, p.apellido AS apellido_estudiante
                         FROM matricula m
@@ -72,6 +74,23 @@
                         WHERE m.id_matricula = ?";
                 return $this->select($sql, [$idMatricula]);
             }
+        }
+
+        // ITERACIÓN 2: última matrícula del estudiante por CI (base de la rematriculación).
+        public function ultimaMatriculaByCi(string $ci)
+        {
+            $sql = "SELECT m.id_matricula, m.gestion, m.id_paralelo, m.tipo AS tipo_matricula,
+                           m.folio, m.estado_inscripcion, m.status AS estado_matricula,
+                           e.id_estudiante, p.ci AS ci_estudiante,
+                           p.nombre AS nombre_estudiante, p.apellido AS apellido_estudiante,
+                           CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
+                    FROM matricula m
+                    INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+                    INNER JOIN persona p ON e.id_persona = p.id_persona
+                    LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+                    WHERE p.ci = ?
+                    ORDER BY m.gestion DESC, m.id_matricula DESC LIMIT 1";
+            return $this->select($sql, [$ci]);
         }
 
         // ITERACIÓN 1: marca documentación pendiente / completa sin tocar SP de pensiones.
@@ -113,10 +132,17 @@
         }
 
         // Actualizar matrícula existente (no regenera pensiones)
-        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion)
+        // ITERACIÓN 2: motivo_estado opcional (M02, tolerante si la columna no existe).
+        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '')
         {
-            $sql = "UPDATE matricula SET id_paralelo = ?, tipo = ?, folio = ?, estado_inscripcion = ? WHERE id_matricula = ?";
-            $ok = $this->update($sql, [$idParalelo, $tipo, $folio, $estadoInscripcion, $idMatricula]);
+            $motivo = trim($motivo);
+            try {
+                $sql = "UPDATE matricula SET id_paralelo = ?, tipo = ?, folio = ?, estado_inscripcion = ?, motivo_estado = ? WHERE id_matricula = ?";
+                $ok = $this->update($sql, [$idParalelo, $tipo, $folio, $estadoInscripcion, $motivo !== '' ? $motivo : null, $idMatricula]);
+            } catch (Exception $e) {
+                $sql = "UPDATE matricula SET id_paralelo = ?, tipo = ?, folio = ?, estado_inscripcion = ? WHERE id_matricula = ?";
+                $ok = $this->update($sql, [$idParalelo, $tipo, $folio, $estadoInscripcion, $idMatricula]);
+            }
             return $ok ? "matricula_actualizada" : false;
         }
 

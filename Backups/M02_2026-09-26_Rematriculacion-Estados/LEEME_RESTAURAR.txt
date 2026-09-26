@@ -1,0 +1,12 @@
+BACKUP PRE-MIGRACIÓN M02 — db_marista
+=====================================
+Fecha: 2026-09-26 (América/La_Paz)
+Servidor: MySQL 9.1.0 local (puerto 3306)
+BD: db_marista (incluye M01 aplicada)
+Archivo: db_marista_PRE-M02_2026-09-26.sql (759 KB aprox, --routines --events --triggers)
+Comando usado:
+  "C:/wamp64/bin/mysql/mysql9.1.0/bin/mysqldump.exe" -h localhost -u root --routines --events --triggers --single-transaction db_marista > db_marista_PRE-M02_2026-09-26.sql
+
+RESTAURAR (solo si M02 falla):
+  "C:/wamp64/bin/mysql/mysql9.1.0/bin/mysql.exe" -h localhost -u root db_marista < db_marista_PRE-M02_2026-09-26.sql
+Verificar: SELECT COUNT(*) FROM estudiante; / SELECT COUNT(*) FROM matricula;

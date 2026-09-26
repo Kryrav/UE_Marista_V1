@@ -292,6 +292,7 @@ function fntViewEstudiante(idEstudiante){
             {
                 let d = objData.ficha.estudiante;
                 fichaIdEstudiante = d.id_estudiante;
+                fichaCiEstudiante = d.ci || "";
                 let tieneFoto = objData.ficha.foto_url.indexOf('uploads/estudiantes/') !== -1;
                 document.querySelector("#fichaFoto").src = objData.ficha.foto_url;
                 document.querySelector("#fichaFotoNota").style.display = tieneFoto ? 'none' : '';
@@ -328,9 +329,11 @@ function fntViewEstudiante(idEstudiante){
                 let hm = '';
                 if(objData.ficha.matriculas.length === 0){ hm = '<p class="text-muted mb-0">Sin matrículas.</p>'; }
                 objData.ficha.matriculas.forEach(function(m){
-                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + '</span></div>';
+                    let mot = m.motivo_estado ? ' · <small class="text-muted">Motivo: ' + escHtml(m.motivo_estado) + '</small>' : '';
+                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + mot + '</span></div>';
                 });
-                document.querySelector("#fichaMatriculas").innerHTML = hm;
+                document.querySelector("#fichaMatriculas").innerHTML = hm
+                    + '<button class="btn btn-success btn-sm mt-2" onclick="fntRematricularDesdeFicha()"><i class="fa fa-forward"></i> Rematricular</button>';
 
                 document.querySelector("#fichaPensiones").innerHTML = htmlPensionesFicha(objData.ficha);
 
@@ -436,6 +439,13 @@ document.addEventListener('keydown', function(e){
 
 // ---------- Tutores ----------
 let fichaIdEstudiante = 0;
+let fichaCiEstudiante = "";
+
+function fntRematricularDesdeFicha(){
+    if(!fichaCiEstudiante){ swal("Error", "Abra primero la ficha del estudiante.", "error"); return; }
+    window.location.href = base_url + '/Matricula';
+    sessionStorage.setItem('remat_ci', fichaCiEstudiante);
+}
 
 function fntCarnetEstudiante(){
     if(!fichaIdEstudiante){ swal("Error", "Abra primero la ficha del estudiante.", "error"); return; }

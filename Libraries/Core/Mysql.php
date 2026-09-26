@@ -4,6 +4,10 @@ class Mysql extends Conexion {
     private $strquery;
     private $arrValues;
     private $lastQuery;
+    // Profundidad de transacciones explícitas del llamador (p.ej. deleteEstudiante).
+    // Un CALL fallido (SIGNAL) deja abierta la transacción iniciada dentro del SP;
+    // si nadie la gestiona (depth 0) hay que cerrarla o envenena el resto del request.
+    private $txnDepth = 0;
     
     function __construct() {
         // Obtener la instancia singleton de Conexion
@@ -28,6 +32,7 @@ class Mysql extends Conexion {
             return false;
             
         } catch (PDOException $e) {
+            $this->rollbackLeaked();
             $this->logError($e);
             return false;
         }
@@ -45,6 +50,7 @@ class Mysql extends Conexion {
             return $result->fetch(PDO::FETCH_ASSOC);
             
         } catch (PDOException $e) {
+            $this->rollbackLeaked();
             $this->logError($e);
             return false;
         }
@@ -62,6 +68,7 @@ class Mysql extends Conexion {
             return $result->fetchAll(PDO::FETCH_ASSOC);
             
         } catch (PDOException $e) {
+            $this->rollbackLeaked();
             $this->logError($e);
             return [];
         }
@@ -78,6 +85,7 @@ class Mysql extends Conexion {
             return $update->execute($this->arrValues);
             
         } catch (PDOException $e) {
+            $this->rollbackLeaked();
             $this->logError($e);
             return false;
         }
@@ -94,6 +102,7 @@ class Mysql extends Conexion {
             return $result->execute($this->arrValues);
             
         } catch (PDOException $e) {
+            $this->rollbackLeaked();
             $this->logError($e);
             return false;
         }
@@ -101,15 +110,42 @@ class Mysql extends Conexion {
     
     // Transacciones
     public function beginTransaction() {
-        return $this->conexion->beginTransaction();
+        $r = $this->conexion->beginTransaction();
+        if ($r) { $this->txnDepth++; }
+        return $r;
     }
     
     public function commit() {
-        return $this->conexion->commit();
+        $r = $this->conexion->commit();
+        if ($r) { $this->txnDepth = max(0, $this->txnDepth - 1); }
+        return $r;
     }
     
     public function rollback() {
-        return $this->conexion->rollback();
+        try {
+            $r = $this->conexion->rollBack();
+        } catch (Exception $x) {
+            $r = false;
+        }
+        $this->txnDepth = max(0, $this->txnDepth - 1);
+        return $r;
+    }
+
+    // Cierra una transacción huérfana dejada por un SP fallido (START TRANSACTION
+    // dentro del SP + SIGNAL sin ROLLBACK). Solo actúa si el llamador no gestiona
+    // transacción propia (depth 0); nunca toca transacciones explícitas ajenas.
+    // NOTA: PDO::inTransaction() NO sirve aquí porque solo rastrea transacciones
+    // iniciadas vía PDO::beginTransaction, no las del servidor; por eso el
+    // ROLLBACK es incondicional (sin txn activa es un no-op inofensivo en MySQL).
+    private function rollbackLeaked() {
+        if ($this->txnDepth !== 0) {
+            return;
+        }
+        try {
+            $this->conexion->exec("ROLLBACK");
+        } catch (Exception $x) {
+            // Sin transacción activa o error al revertir: nada que hacer
+        }
     }
     
     // Helper para debugging

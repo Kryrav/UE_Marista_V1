@@ -1,5 +1,5 @@
 # Manual de Usuario — Gestión de Estudiantes y Matrícula
-**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.1 (incluye M01 Documentación pendiente)
+**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.2 (incluye M02 rematriculación y estados)
 **Usuarios:** Secretaría/Administración (uso diario), Dirección (aprueba), Regencia (cursos), Docentes tutores (consulta)
 
 > Este manual es vivo: cada cambio futuro (M02, M03...) agrega una sección al final y actualiza la portada. Último cambio: M01 2026-09-26.
@@ -45,6 +45,20 @@ Resultado: `Estudiante registrado... Matriculado en gestión 2026... Documentaci
 `Matrícula > Matricular Estudiante`: `C.I. + Año lectivo + Curso + Tipo + Folio (opcional) + Confirmación [Confirmado/Inscrito/Pendiente de documentos]`.
 Si elige Pendiente, complete checklist + `Plazo hasta` (vacío = auto 30 hábiles) + `Compromiso` + observación. Un estudiante = una matrícula por gestión (si repite, avisa `ya matriculado`).
 
+## 4B. Rematricular al año siguiente (NUEVO M02)
+
+Sin reescribir datos: use el botón verde `⏩` en la fila de la matrícula anterior, o en la ficha del estudiante (`Matrículas > Rematricular`, que lo lleva a Matrícula con todo precargado).
+1. Verá `Rematricular: Nombre (CI)` con la gestión destino propuesta (activa, o última+1) y el tipo anterior.
+2. Elija el **nuevo paralelo** y pulse `Rematricular`.
+3. Se crean las 10 pensiones de la nueva gestión. La matrícula anterior queda intacta como historial.
+Si el estudiante ya está en esa gestión, avisa y no duplica.
+
+## 4C. Retirado / Trasladado / Egresado (NUEVO M02)
+
+No borre la matrícula: consérvela como historial cambiando su estado.
+`Matrícula > ✏️ Editar > Confirmación = Retirado/Trasladado/Egresado` + **Motivo obligatorio** (ej. `Traslado a UE San José, nota N° 12`). Verá badges gris/oscuro/azul y el motivo al pasar el cursor, en Ver y en la ficha.
+Para dar de baja al estudiante después, rige lo mismo: con matrículas en historial no se elimina (se pone Inactivo).
+
 ## 5. Buscar, filtrar y ficha
 
 - Tabla `Estudiantes`: buscador global (CI, RUDE, nombre), filtros `Curso actual`, `Estado Activos/Inactivos`, `☑ Solo sin folio`. Botones Copiar/Excel/PDF/CSV.
@@ -83,6 +97,7 @@ Si elige Pendiente, complete checklist + `Plazo hasta` (vacío = auto 30 hábile
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
+- v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario).
 - v1.1 2026-09-26 M01: diferibles, pendiente 30h, checklist, badges, plazo auto.
 - v1.0 Base: alta 3 pasos, matrícula, ficha, tutores, legajo.
 - Próximo M02: rematriculación en 1 clic + Retirado/Trasladado/Egresado. M03: rezago, discapacidad, comprobante matrícula.

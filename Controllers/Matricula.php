@@ -54,6 +54,15 @@
                         $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-success">Confirmado</span>';
                     }elseif($ei === 'Inscrito'){
                         $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-info">Inscrito</span>';
+                    // ITERACIÓN 2: estados terminales con historial preservado (F-09)
+                    }elseif($ei === 'Retirado'){
+                        $mot = trim($arrData[$i]['motivo_estado'] ?? '');
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-secondary"'.($mot !== '' ? ' title="'.htmlspecialchars($mot).'"' : '').'>Retirado</span>';
+                    }elseif($ei === 'Trasladado'){
+                        $mot = trim($arrData[$i]['motivo_estado'] ?? '');
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-dark"'.($mot !== '' ? ' title="'.htmlspecialchars($mot).'"' : '').'>Trasladado</span>';
+                    }elseif($ei === 'Egresado'){
+                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-primary"'.(trim($arrData[$i]['motivo_estado'] ?? '') !== '' ? ' title="'.htmlspecialchars($arrData[$i]['motivo_estado']).'"' : '').'>Egresado</span>';
                     }
 
                     if($_SESSION['permisosMod']['r']){
@@ -66,7 +75,12 @@
                         $btnDelete = '<button class="btn btn-danger btn-sm btnDelMatricula" onClick="fntDelMatricula('.$arrData[$i]['id_matricula'].')" title="Eliminar Matrícula"><i class="far fa-trash-alt"></i></button>';
 
                     }
-                    $arrData[$i]['options'] = '<div class="text-center">'.$btnView.' '.$btnEdit.' '.$btnDelete.'</div>';
+                    // ITERACIÓN 2: rematricular directo desde la fila (usa CI de la fila)
+                    $btnRem = '';
+                    if($_SESSION['permisosMod']['w']){
+                        $btnRem = '<button class="btn btn-success btn-sm" onClick="fntRematricular(\''.htmlspecialchars($arrData[$i]['ci_estudiante'] ?? '', ENT_QUOTES).'\')" title="Rematricular en siguiente gestión"><i class="fas fa-forward"></i></button>';
+                    }
+                    $arrData[$i]['options'] = '<div class="text-center">'.$btnView.' '.$btnEdit.' '.$btnDelete.' '.$btnRem.'</div>';
                 }
                 echo json_encode($arrData,JSON_UNESCAPED_UNICODE);
 			}
@@ -91,6 +105,12 @@
 				$strFolio=strClean($_POST['txtFolio'] ?? '');
 				$strStatus=strClean($_POST['listStateInscripcion']);
 				$intIdMatricula=intval($_POST['idMatricula'] ?? 0);
+				// ITERACIÓN 2: motivo obligatorio en estados terminales (auditoría mínima F-09)
+				$motivoEstado=strClean($_POST['motivoEstado'] ?? '');
+				if(function_exists('esEstadoTerminal') && esEstadoTerminal($strStatus) && $motivoEstado === ''){
+					$arrResponse=array("status"=>false,"msg"=>'Indique el motivo del cambio a '.$strStatus.'.');
+					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
+				}
 				// Documentación diferida (opcionales, no bloquean)
 				$docPend = !empty($_POST['chkDocPendiente']) || $strStatus === 'Pendiente_Documentos';
 				if($docPend){ $strStatus = 'Pendiente_Documentos'; }
@@ -130,7 +150,7 @@
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
 					}
 					if ($_SESSION['permisosMod']['u']) {
-						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado);
 						if($request_user == "matricula_actualizada"){
 							// Si pasa a Confirmado y no es pendiente, se libera el plazo
 							if($strStatus === 'Pendiente_Documentos'){
@@ -181,6 +201,54 @@
 				}
 			}
 			die();
+		}
+
+		// ITERACIÓN 2 (F-04): última matrícula por CI para precargar la rematriculación.
+		public function ultimaMatricula()
+		{
+			if ($_SESSION['permisosMod']['r']) {
+				$ci = strClean($_GET['ci'] ?? ($_POST['ci'] ?? ''));
+				if($ci === ''){ echo json_encode(array('status'=>false,'msg'=>'Indique el CI.'),JSON_UNESCAPED_UNICODE); die(); }
+				$last = $this->model->ultimaMatriculaByCi($ci);
+				if(empty($last)){ echo json_encode(array('status'=>false,'msg'=>'Sin matrículas previas para ese CI.'),JSON_UNESCAPED_UNICODE); die(); }
+				require_once("Models/GestionModel.php");
+				$gm = new GestionModel();
+				$act = $gm->selectGestionAct();
+				echo json_encode(array('status'=>true,'data'=>$last,'gestion_activa'=>intval($act["gestion"] ?? date("Y"))),JSON_UNESCAPED_UNICODE);
+			}
+			die();
+		}
+
+		// ITERACIÓN 2 (F-04): rematricular regular en la gestión destino.
+		// Reutiliza insertMatricula (SP genera las 10 pensiones); no duplica por gestión.
+		public function rematricular()
+		{
+			if ($_POST) {
+				if(!$_SESSION['permisosMod']['w']){
+					echo json_encode(array("status"=>false,"msg"=>'Sin permiso para rematricular.'),JSON_UNESCAPED_UNICODE);die();
+				}
+				$ci = strClean($_POST['ci'] ?? '');
+				$gestion = intval($_POST['gestion'] ?? 0);
+				$paralelo = intval($_POST['paralelo'] ?? 0);
+				$tipo = strClean($_POST['tipo'] ?? 'Regular');
+				if($ci === '' || $gestion < 2000 || $gestion > 2100 || $paralelo <= 0){
+					echo json_encode(array("status"=>false,"msg"=>'Datos incompletos: CI, gestión válida y paralelo.'),JSON_UNESCAPED_UNICODE);die();
+				}
+				if($tipo === ''){ $tipo = 'Regular'; }
+				$last = $this->model->ultimaMatriculaByCi($ci);
+				if(empty($last)){
+					echo json_encode(array("status"=>false,"msg"=>'El CI no tiene matrículas previas; use Nueva Matrícula.'),JSON_UNESCAPED_UNICODE);die();
+				}
+				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', 'Inscrito');
+				if($res == "matricula_guardada"){
+					echo json_encode(array("status"=>true,"msg"=>"Rematriculado en gestión $gestion (10 pensiones generadas). Curso anterior: ".($last['curso'] ?? '—')."."),JSON_UNESCAPED_UNICODE);
+				}elseif($res == "matricula_existente"){
+					echo json_encode(array("status"=>false,"msg"=>'Ya está matriculado en esa gestión.'),JSON_UNESCAPED_UNICODE);
+				}else{
+					echo json_encode(array("status"=>false,"msg"=>'No se pudo rematricular: '.$res),JSON_UNESCAPED_UNICODE);
+				}
+				die();
+			}
 		}
 
 		// BAJA LÓGICA DE MATRÍCULA

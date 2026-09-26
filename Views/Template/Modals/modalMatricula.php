@@ -55,7 +55,15 @@
                         <option value="Confirmado">Confirmado</option>
                         <option value="Inscrito">Inscrito</option>
                         <option value="Pendiente_Documentos">Pendiente de documentos (30 días hábiles)</option>
+                        <option value="Retirado">Retirado (conserva historial)</option>
+                        <option value="Trasladado">Trasladado (conserva historial)</option>
+                        <option value="Egresado">Egresado (conserva historial)</option>
                     </select>
+                </div>
+                <div class="form-group col-md-6" id="boxMotivoEstado" style="display:none;">
+                    <label for="motivoEstado">Motivo del cambio *</label>
+                    <input type="text" class="form-control" id="motivoEstado" name="motivoEstado" maxlength="255" placeholder="Ej. Traslado a UE San José, nota N°...">
+                    <small class="form-text text-muted">Obligatorio en Retirado/Trasladado/Egresado.</small>
                 </div>
               </div>
               <div class="alert alert-warning py-2">

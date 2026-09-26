@@ -1,0 +1,16 @@
+MIGRACIÓN M02 APLICADA — db_marista
+================================
+Fecha: 2026-09-26, servidor MySQL 9.1.0 (puerto 3306)
+Migración: Tools/migraciones/m02_rematriculacion_estados.sql
+
+Aplicado:
+1. ALTER matricula ADD motivo_estado VARCHAR(255) NULL ... ADDED
+2. SPs vía mysql.exe (EXIT 0):
+   - listar_matriculas (con motivo + docs)
+   - sp_registrar_estudiante 24p M01 + EXIT HANDLER
+   - updateEstudiante 25p M01 + EXIT HANDLER
+   - matricular_estudiante_y_generar_pensiones (cuerpo VIVO con mes_num/
+     fecha_vencimiento, preservado íntegro) + EXIT HANDLER
+
+Verificación: motivo_estado YES; params 24/25; TEST M02 OK.
+Backups: PRE (759 KB) + POST (761 KB) en esta carpeta.

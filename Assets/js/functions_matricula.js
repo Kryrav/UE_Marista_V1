@@ -87,10 +87,21 @@ document.addEventListener('DOMContentLoaded', function(){
             }
             divLoading.style.display = "flex";
             let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
-            let ajaxUrl = base_url+'/Matricula/insertNewMatricula/'; 
-            let formData = new FormData(formMatricula);
-            request.open("POST",ajaxUrl,true);
-            request.send(formData);
+            // ITERACIÓN 2: modo rematricular usa endpoint dedicado (sin folio/docs)
+            if(window._rematMode){
+                let fd = new FormData();
+                fd.append('ci', document.querySelector('#txtCi').value.trim());
+                fd.append('gestion', document.querySelector('#intGestion').value.trim());
+                fd.append('paralelo', document.querySelector('#listParalelos').value);
+                fd.append('tipo', document.querySelector('#listTipoEstudiante').value);
+                request.open("POST", base_url+'/Matricula/rematricular/', true);
+                request.send(fd);
+            }else{
+                let ajaxUrl = base_url+'/Matricula/insertNewMatricula/';
+                let formData = new FormData(formMatricula);
+                request.open("POST",ajaxUrl,true);
+                request.send(formData);
+            }
             request.onreadystatechange = function(){
                 if(request.readyState == 4 && request.status == 200){
                     let objData = JSON.parse(request.responseText);
@@ -116,16 +127,50 @@ document.addEventListener('DOMContentLoaded', function(){
 
 function openModal()
 {
+    window._rematMode = false;
     document.querySelector("#formNewMatricula").reset();
     document.querySelector('#newG').value = "1";
     document.querySelector('#idMatricula').value = "0";
     document.querySelector('#txtCi').disabled = false;
     document.querySelector('#titleModal').innerHTML = "Nueva Matrícula";
     document.querySelector('#btnText').innerHTML = "Matricular Estudiante";
+    let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
     let year = new Date().getFullYear();
     document.querySelector('#intGestion').value = year;
     fntListParalelos(year);
     $('#modalFormMatricula').modal('show');
+}
+
+// ITERACIÓN 2 (F-04): rematricular regular precargando la última matrícula.
+function fntRematricular(ci){
+    if(!ci){ swal("Atención", "CI inválido para rematricular.", "error"); return; }
+    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    request.open("GET", base_url+'/Matricula/ultimaMatricula?ci='+encodeURIComponent(ci), true);
+    request.send();
+    request.onreadystatechange = function(){
+        if(request.readyState == 4 && request.status == 200){
+            let o = JSON.parse(request.responseText);
+            if(!o.status){ swal("Error", o.msg, "error"); return; }
+            let d = o.data;
+            window._rematMode = true;
+            document.querySelector("#formNewMatricula").reset();
+            document.querySelector('#newG').value = "1";
+            document.querySelector('#idMatricula').value = "0";
+            document.querySelector('#txtCi').value = d.ci_estudiante;
+            document.querySelector('#txtCi').disabled = true;
+            document.querySelector('#titleModal').innerHTML = "Rematricular: " + d.nombre_estudiante + " " + d.apellido_estudiante + " (" + d.ci_estudiante + ")";
+            document.querySelector('#btnText').innerHTML = "Rematricular";
+            let dest = o.gestion_activa || new Date().getFullYear();
+            if(parseInt(d.gestion) >= dest){ dest = parseInt(d.gestion) + 1; }
+            document.querySelector('#intGestion').value = dest;
+            document.querySelector('#listTipoEstudiante').value = d.tipo_matricula || 'Regular';
+            document.querySelector('#listStateInscripcion').value = 'Inscrito';
+            let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+            fntListParalelos(dest);
+            swal("Rematriculación", "Última: gestión " + d.gestion + " · " + (d.curso || 'sin curso') + " · " + d.estado_inscripcion + ". Elija el nuevo paralelo.", "info");
+            $('#modalFormMatricula').modal('show');
+        }
+    }
 }
 
 function fntViewMatricula(idMatricula){
@@ -141,6 +186,7 @@ function fntViewMatricula(idMatricula){
                 let extra = d.estado_inscripcion;
                 if(d.plazo_documentos_hasta){ extra += " | Plazo docs: " + d.plazo_documentos_hasta; }
                 if(d.compromiso_firmado == 1){ extra += " | Compromiso: sí"; }
+                if(d.motivo_estado){ extra += " | Motivo: " + d.motivo_estado; }
                 swal("Matrícula "+d.id_matricula, "Estudiante: "+d.nombre_estudiante+" "+d.apellido_estudiante+" ("+d.ci_estudiante+") | Gestión: "+d.gestion+" | Tipo: "+d.tipo_matricula+" | "+extra, "info");
             }else{
                 swal("Error", objData.msg, "error");
@@ -150,6 +196,7 @@ function fntViewMatricula(idMatricula){
 }
 
 function fntEditMatricula(element, idMatricula){
+    window._rematMode = false;
     document.querySelector('#titleModal').innerHTML = "Actualizar Matrícula";
     document.querySelector('#btnText').innerHTML = "Actualizar";
     let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
@@ -184,6 +231,9 @@ function fntEditMatricula(element, idMatricula){
                     let cc = document.querySelector('#chkCompromiso'); if(cc && d.compromiso_firmado != null) cc.checked = (d.compromiso_firmado == 1);
                     let ob = document.querySelector('#modalFormMatricula [name="docsObs"]'); if(ob) ob.value = d.docs_observacion || "";
                 } catch(e){}
+                // ITERACIÓN 2: motivo de estado terminal
+                let mo = document.querySelector('#motivoEstado'); if(mo) mo.value = d.motivo_estado || "";
+                toggleMotivoBox();
                 fntListParalelos(d.gestion, d.id_paralelo);
                 $('#modalFormMatricula').modal('show');
             }else{
@@ -228,6 +278,7 @@ function fntDelMatricula(idMatricula){
 
     //FUNCIONES DEL SISTEMA -
     // ITERACIÓN 1: sincroniza check Pendiente <-> select estado
+    // ITERACIÓN 2: muestra motivo en estados terminales
     document.addEventListener('change', function(e){
         if(e.target && e.target.id === 'chkDocPendiente'){
             let sel = document.querySelector('#listStateInscripcion');
@@ -236,11 +287,24 @@ function fntDelMatricula(idMatricula){
         if(e.target && e.target.id === 'listStateInscripcion'){
             let chk = document.querySelector('#chkDocPendiente');
             if(chk){ chk.checked = (e.target.value === 'Pendiente_Documentos'); }
+            toggleMotivoBox();
         }
     });
+
+function toggleMotivoBox(){
+    let sel = document.querySelector('#listStateInscripcion');
+    let box = document.querySelector('#boxMotivoEstado');
+    if(!sel || !box) return;
+    let v = sel.value;
+    box.style.display = (v === 'Retirado' || v === 'Trasladado' || v === 'Egresado') ? '' : 'none';
+}
 window.addEventListener('load', function() {
         fntListParalelos();
-        
+        // ITERACIÓN 2: llegada desde ficha del estudiante → abre rematricular
+        try {
+            let ci = sessionStorage.getItem('remat_ci');
+            if(ci){ sessionStorage.removeItem('remat_ci'); fntRematricular(ci); }
+        } catch(e){}
 }, false);
 
 function fntListParalelos(gestion, selected){

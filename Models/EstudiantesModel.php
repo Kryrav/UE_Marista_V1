@@ -27,11 +27,20 @@
         "SELECT pa.id_padre, pa.tipo_parentesco, t.nombre, t.apellido, t.cel, t.email
          FROM padre pa INNER JOIN persona t ON pa.id_persona = t.id_persona
          WHERE pa.id_estudiante = ? AND pa.status != 0", [$IdEst]);
-      $matriculas = $this->select_all(
-        "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.status,
-                CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
-         FROM matricula m LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
-         WHERE m.id_estudiante = ? ORDER BY m.gestion DESC", [$IdEst]);
+      // ITERACIÓN 2: + motivo_estado (M02, tolerante si la columna no existe)
+      try {
+        $matriculas = $this->select_all(
+          "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.status, m.motivo_estado,
+                  CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
+           FROM matricula m LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+           WHERE m.id_estudiante = ? ORDER BY m.gestion DESC", [$IdEst]);
+      } catch (Exception $e) {
+        $matriculas = $this->select_all(
+          "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.status,
+                  CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
+           FROM matricula m LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+           WHERE m.id_estudiante = ? ORDER BY m.gestion DESC", [$IdEst]);
+      }
       $pens = $this->select(
         "SELECT COUNT(*) AS total, SUM(estado_pago=1) AS pagadas, SUM(estado_pago=0) AS pendientes,
                 COALESCE(SUM(CASE WHEN estado_pago=1 THEN monto ELSE 0 END),0) AS cobrado,
