@@ -179,8 +179,13 @@ function fntRematricular(ci){
     }
 }
 
-function fntViewMatricula(idMatricula){
-    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+// I3 (U-05): comprobante de matrícula imprimible
+function fntComprobante(idMatricula){
+    if(!idMatricula){ swal("Error", "Matrícula inválida.", "error"); return; }
+    window.open(base_url + '/Matricula/comprobante/' + idMatricula, '_blank');
+}
+
+function fntViewMatricula(idMatricula){    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
     let ajaxUrl = base_url+'/Matricula/getMatricula/'+idMatricula;
     request.open("GET",ajaxUrl,true);
     request.send();

@@ -101,7 +101,12 @@
                     if($_SESSION['permisosMod']['w']){
                         $btnRem = '<button class="btn btn-success btn-sm" onClick="fntRematricular(\''.htmlspecialchars($arrData[$i]['ci_estudiante'] ?? '', ENT_QUOTES).'\')" title="Rematricular en siguiente gestión"><i class="fas fa-forward"></i></button>';
                     }
-                    $arrData[$i]['options'] = '<div class="text-center">'.$btnView.' '.$btnEdit.' '.$btnDelete.' '.$btnRem.'</div>';
+                    // I3 (U-05): comprobante imprimible
+                    $btnComp = '';
+                    if($_SESSION['permisosMod']['r']){
+                        $btnComp = '<button class="btn btn-secondary btn-sm" onClick="fntComprobante('.$arrData[$i]['id_matricula'].')" title="Comprobante de matrícula"><i class="fa fa-print"></i></button>';
+                    }
+                    $arrData[$i]['options'] = '<div class="text-center">'.$btnView.' '.$btnEdit.' '.$btnDelete.' '.$btnRem.' '.$btnComp.'</div>';
                 }
                 echo json_encode($arrData,JSON_UNESCAPED_UNICODE);
 			}
@@ -172,7 +177,8 @@
 						}
 					}
 					if ($_SESSION['permisosMod']['w']) {
-						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus);
+						$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
+						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$uid);
 						if($request_user == "matricula_guardada" && ($docPend || $plazo !== null)){
 							$this->model->setDocumentacionByCiGestion($strCi,$intGestion,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
 						}
@@ -189,7 +195,8 @@
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
 					}
 					if ($_SESSION['permisosMod']['u']) {
-						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado);
+						$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
+						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado,$uid);
 						if($request_user == "matricula_actualizada"){
 							// Si pasa a Confirmado y no es pendiente, se libera el plazo
 							if($strStatus === 'Pendiente_Documentos'){
@@ -290,7 +297,7 @@
 				if(empty($last)){
 					echo json_encode(array("status"=>false,"msg"=>'El CI no tiene matrículas previas; use Nueva Matrícula.'),JSON_UNESCAPED_UNICODE);die();
 				}
-				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', 'Inscrito');
+				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', 'Inscrito', intval($_SESSION['idUser'] ?? 0) ?: null);
 				if($res == "matricula_guardada"){
 					if($gAct > 0 && $gestion !== $gAct){
 						$this->model->setMotivoByCiGestion($ci, $gestion, 'Rectificación histórica: '.strClean($_POST['motivoRectificacion'] ?? ''));
@@ -303,6 +310,27 @@
 				}
 				die();
 			}
+		}
+
+		// ITERACIÓN 3 (U-05): comprobante de matrícula imprimible (cabecera + pensiones).
+		public function comprobante(int $idMatricula)
+		{
+			if(empty($_SESSION['permisosMod']['r'])){
+				header("Location:".base_url().'/dashboard');
+				die();
+			}
+			require_once("Models/EstudiantesModel.php");
+			$em = new EstudiantesModel();
+			$id = intval($idMatricula);
+			if($id <= 0){ header("Location:".base_url().'/matricula'); die(); }
+			$hist = $em->getHistorialMatricula($id);
+			if(empty($hist)){ header("Location:".base_url().'/matricula'); die(); }
+			$data['page_tag'] = "Comprobante de matrícula";
+			$data['hist'] = $hist;
+			$data['emision'] = date('d/m/Y H:i');
+			$data['usuario_emisor'] = $_SESSION['userData']['nombre'] ?? '';
+			require_once("Views/Matricula/comprobante.php");
+			die();
 		}
 
 		// BAJA LÓGICA DE MATRÍCULA

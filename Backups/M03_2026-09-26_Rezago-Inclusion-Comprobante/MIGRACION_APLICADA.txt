@@ -1,0 +1,15 @@
+MIGRACIÓN M03 APLICADA — db_marista
+================================
+Fecha: 2026-09-26, servidor MySQL 9.1.0 (puerto 3306)
+Migración: Tools/migraciones/m03_inclusion_auditoria_indices.sql
+
+Aplicado (con chequeo previo INFORMATION_SCHEMA):
+- CREATE TABLE estudiante_inclusion (1-1 con estudiante) ... OK
+- estudiante.created_by/updated_by/updated_at ... ADDED (3/3)
+- matricula.created_by/updated_by/updated_at ... ADDED (3/3)
+- INDEX idx_persona_apellido ... ADDED
+
+Verificación: TEST M03 OK (rezago alerta/no-alerta, alta con created_by=1,
+inclusión save/get, matrícula con created_by=1 e id_user real, buscar,
+candidatos, comprobante 10 cuotas, limpieza left=0).
+Backups: PRE (761 KB) + POST (770 KB) en esta carpeta.

@@ -1,5 +1,5 @@
 # Manual de Usuario — Gestión de Estudiantes y Matrícula
-**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.2 (incluye M02 rematriculación y estados)
+**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.3 (incluye M03 inclusión, rezago, comprobante)
 **Usuarios:** Secretaría/Administración (uso diario), Dirección (aprueba), Regencia (cursos), Docentes tutores (consulta)
 
 > Este manual es vivo: cada cambio futuro (M02, M03...) agrega una sección al final y actualiza la portada. Último cambio: M01 2026-09-26.
@@ -23,7 +23,8 @@
   Si no los tiene, déjelos vacíos y el sistema los pedirá después.
 
 **Paso 2 Académicos:**
-- `Estudiante: Nuevo/Antiguo/Retirado`, `Colegio procedencia`, `País/Ciudad/Provincia`, `Emergencia`, `Estado Activo/Inactivo`, legajo `Folio (vacío=auto), Estante, Gaveta, Estado`.
+- `Estudiante: Nuevo/Antiguo/Retirado`, `Colegio de procedencia`, `País/Ciudad/Provincia`, `Emergencia`, `Estado Activo/Inactivo`, legajo `Folio (vacío=auto), Estante, Gaveta, Estado`.
+- **Inclusión (NUEVO M03, opcional):** `Con discapacidad + tipo`, `Adaptaciones`, `Centro especial + matrícula paralela`, `Requiere Comisión Técnica`. No bloquea nada; se ve como tira en la ficha.
 
 **Paso 3 Acceso y matrícula:**
 - Aviso: la clave inicial es el C.I.; se cambia en `Usuarios`.
@@ -80,7 +81,8 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 - `Cursos > Ver > Lista / Imprimir` nómina del paralelo.
 - `Estudiantes > Ficha > Historial` (pagos de la matrícula) y `Carnet QR` (verificable en `Verificar`).
-- Comprobante de matrícula anual (M03, pendiente): por ahora el historial + ficha son respaldo.
+- **Comprobante de matrícula (NUEVO M03):** botón 🖨 en cada fila de `Matrícula` o enlace en la ficha. Incluye datos, estado/motivo, documentos pendientes, totales y firmas de Secretaría, Dirección y apoderado.
+- **Rezago (NUEVO M03):** botón `Rezago` en `Estudiantes` abre el reporte de 2+ años para Comisión Técnica (firmas de Dirección, Comisión y Regencia).
 
 ## 9. Preguntas frecuentes
 
@@ -98,6 +100,7 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
+- v1.3 2026-09-26 M03: inclusión opcional, reporte de rezago, comprobante de matrícula, auditoría interna.
 - v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario). Addenda: matriculación/rematriculación solo en gestión activa salvo rectificación Admin/Dirección con motivo.
 - v1.1 2026-09-26 M01: diferibles, pendiente 30h, checklist, badges, plazo auto.
 - v1.0 Base: alta 3 pasos, matrícula, ficha, tutores, legajo.

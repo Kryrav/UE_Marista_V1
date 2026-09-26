@@ -61,7 +61,66 @@
          ORDER BY m.gestion DESC, $ordenMes", [$IdEst]);
       return ["estudiante"=>$est, "tutores"=>$tutores ?: [], "matriculas"=>$matriculas ?: [],
               "pensiones"=>$pens ?: ["total"=>0,"pagadas"=>0,"pendientes"=>0,"cobrado"=>0,"deuda"=>0],
-              "pensiones_detalle"=>$pensDet ?: []];
+              "pensiones_detalle"=>$pensDet ?: [],
+              "inclusion"=>$this->getInclusion($IdEst)];
+    }
+
+    // ITERACIÓN 3: inclusión/apoyo (tabla separada, sin tocar SPs).
+    public function getInclusion(int $idEst)
+    {
+      try {
+        $row = $this->select("SELECT * FROM estudiante_inclusion WHERE id_estudiante = ?", [$idEst]);
+        return $row ?: ["tiene_discapacidad"=>0,"tipo_discapacidad"=>null,"adaptaciones"=>null,"centro_especial"=>null,"matricula_paralela"=>0,"requiere_comision"=>0];
+      } catch (Exception $e) { return ["tiene_discapacidad"=>0,"requiere_comision"=>0]; }
+    }
+
+    public function saveInclusion(int $idEst, array $d, ?int $userId = null)
+    {
+      $t = [
+        "disc" => !empty($d['tiene_discapacidad']) ? 1 : 0,
+        "tipo" => trim($d['tipo_discapacidad'] ?? '') !== '' ? trim($d['tipo_discapacidad']) : null,
+        "adap" => trim($d['adaptaciones'] ?? '') !== '' ? trim($d['adaptaciones']) : null,
+        "centro" => trim($d['centro_especial'] ?? '') !== '' ? trim($d['centro_especial']) : null,
+        "par" => !empty($d['matricula_paralela']) ? 1 : 0,
+        "com" => !empty($d['requiere_comision']) ? 1 : 0,
+      ];
+      $sql = "INSERT INTO estudiante_inclusion (id_estudiante, tiene_discapacidad, tipo_discapacidad, adaptaciones, centro_especial, matricula_paralela, requiere_comision, created_by, updated_by)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE tiene_discapacidad=VALUES(tiene_discapacidad), tipo_discapacidad=VALUES(tipo_discapacidad),
+              adaptaciones=VALUES(adaptaciones), centro_especial=VALUES(centro_especial), matricula_paralela=VALUES(matricula_paralela),
+              requiere_comision=VALUES(requiere_comision), updated_by=VALUES(updated_by)";
+      return (bool)$this->insert($sql, [$idEst, $t["disc"], $t["tipo"], $t["adap"], $t["centro"], $t["par"], $t["com"], $userId, $userId]);
+    }
+
+    // ITERACIÓN 3: búsqueda server-side (autocompletado, top 20).
+    public function buscarEstudiantes(string $q)
+    {
+      $like = '%'.trim($q).'%';
+      return $this->select_all(
+        "SELECT e.id_estudiante, p.ci, e.rude, p.nombre, p.apellido,
+                CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
+         FROM estudiante e INNER JOIN persona p ON e.id_persona = p.id_persona
+         LEFT JOIN matricula m ON m.id_estudiante = e.id_estudiante AND m.status = 1
+           AND m.gestion = (SELECT gestion FROM gestion WHERE status = 1 LIMIT 1)
+         LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+         WHERE e.status != 0 AND (p.ci LIKE ? OR e.rude LIKE ? OR CONCAT(p.nombre,' ',p.apellido) LIKE ?)
+         ORDER BY p.apellido, p.nombre LIMIT 20",
+        [$like, $like, $like]);
+    }
+
+    // ITERACIÓN 3: candidatos a rezago (activos con curso en gestión activa).
+    public function rezagoCandidates()
+    {
+      return $this->select_all(
+        "SELECT e.id_estudiante, p.ci, p.nombre, p.apellido, e.fnacimiento, e.rude,
+                pa.nivel, pa.grado, pa.sigla, m.gestion, p.cel, p.email,
+                (SELECT COUNT(*) FROM padre WHERE id_estudiante = e.id_estudiante AND status != 0) AS tutores
+         FROM estudiante e INNER JOIN persona p ON e.id_persona = p.id_persona
+         INNER JOIN matricula m ON m.id_estudiante = e.id_estudiante AND m.status = 1
+           AND m.gestion = (SELECT gestion FROM gestion WHERE status = 1 LIMIT 1)
+         INNER JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+         WHERE e.status = 1
+         ORDER BY pa.nivel, pa.grado, pa.sigla, p.apellido");
     }
 
     // Pre-chequeo de duplicados con mensaje específico. $excludeIdEstudiante=null en insert.
@@ -126,7 +185,7 @@
       $this->update("UPDATE persona SET status = 1 WHERE ci = ?", [$ci]);
     }
 
-    public function insertEstudiante(string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null)
+    public function insertEstudiante(string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null, ?int $userId = null)
     {
       // ITERACIÓN 1: diferibles "" -> NULL; usuario fallback = email o CI
       $strTelefono = trim($strTelefono ?? ''); if($strTelefono === ''){ $strTelefono = null; }
@@ -154,6 +213,10 @@
             if ($request_insert) {
               // Alta siempre con acceso: el estado académico NO restringe el sistema.
               $this->grantPersonaAccess($strCi);
+              // I3 auditoría (tolerante si la columna no existe)
+              if($userId !== null && $userId > 0){
+                try { $this->update("UPDATE estudiante SET created_by = ? WHERE id_persona = (SELECT id_persona FROM persona WHERE ci = ?)", [$userId, $strCi]); } catch (Exception $x) {}
+              }
               return "dato_guardado";
             }
             return "Error al guardar";
@@ -170,7 +233,7 @@
       return "Error al guardar: no se pudo asignar folio.";
     }
 
-    public function updateEstudiante(int $idStudent, string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null)
+    public function updateEstudiante(int $idStudent, string $strCi, string $strRUDE, string $strlistEst, string $strNombre, string $strApellido, string $strSex, string $strTelefono, string $strEmail, string $strDireccion, string $dateFNacimiento, string $strPais, string $strCiudad, string $strProvincia, string $strColegioProc, string $strEmergencia, string $intTipoId, string $strPassword, int $intStatus, string $strFoto = null, $folio = null, string $estante = null, string $gaveta = null, string $estadoLegajo = null, ?int $userId = null)
     {
       // ITERACIÓN 1: diferibles "" -> NULL (conservar si no se envían en edición parcial)
       $norm = function($v){ $v = trim((string)($v ?? '')); return $v === '' ? null : $v; };
@@ -210,6 +273,10 @@
           if ($request) {
             // Intencionalmente NO se toca persona.status: el estado académico
             // no restringe el acceso (se gestiona en Usuarios).
+            // I3 auditoría (tolerante)
+            if($userId !== null && $userId > 0){
+              try { $this->update("UPDATE estudiante SET updated_by = ? WHERE id_estudiante = ?", [$userId, $idStudent]); } catch (Exception $x) {}
+            }
             return "dato_guardado";
           }
           return "Error al guardar";
@@ -221,16 +288,31 @@
     // Historial de pagos de UNA matrícula (hoja imprimible): cabecera + pensiones + colegio
     public function getHistorialMatricula(int $idMatricula)
     {
-      $cab = $this->select(
-        "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.folio, m.fecha_reg AS fecha_matricula,
-                e.id_estudiante, e.rude, e.folio_fisico,
-                p.ci, p.nombre, p.apellido, p.cel, p.email,
-                CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso, pa.turno
-         FROM matricula m
-         INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
-         INNER JOIN persona p ON e.id_persona = p.id_persona
-         LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
-         WHERE m.id_matricula = ?", [$idMatricula]);
+      // I3: motivo/plazo con fallback si la BD aún no migró (M02/M01)
+      try {
+        $cab = $this->select(
+          "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.folio, m.fecha_reg AS fecha_matricula,
+                  m.motivo_estado, m.plazo_documentos_hasta,
+                  e.id_estudiante, e.rude, e.folio_fisico,
+                  p.ci, p.nombre, p.apellido, p.cel, p.email,
+                  CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso, pa.turno
+           FROM matricula m
+           INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+           INNER JOIN persona p ON e.id_persona = p.id_persona
+           LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+           WHERE m.id_matricula = ?", [$idMatricula]);
+      } catch (Exception $e) {
+        $cab = $this->select(
+          "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.folio, m.fecha_reg AS fecha_matricula,
+                  e.id_estudiante, e.rude, e.folio_fisico,
+                  p.ci, p.nombre, p.apellido, p.cel, p.email,
+                  CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso, pa.turno
+           FROM matricula m
+           INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+           INNER JOIN persona p ON e.id_persona = p.id_persona
+           LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+           WHERE m.id_matricula = ?", [$idMatricula]);
+      }
       if(empty($cab)){ return null; }
       $ordenMes = "FIELD(mes,'Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre')";
       $pens = $this->select_all(

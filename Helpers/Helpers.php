@@ -1008,6 +1008,23 @@ function esEstadoInscripcionValido(string $estado): bool
 }
 
 // ============================================================================
+// ITERACIÓN 3 — Rezago escolar (Bolivia): Inicial 4-5a, Primaria 1° = 6a
+// ============================================================================
+
+/**
+ * Calcula rezago: edad vs grado esperado. Alerta con 2+ años (Comisión Técnica).
+ * @return array{edad:int, esperada:int, rezago:int, alerta:bool}
+ */
+function calculaRezago(string $fnacYmd, string $nivel, $grado): array
+{
+    try { $fn = new DateTime($fnacYmd); } catch (Exception $e) { return ['edad' => 0, 'esperada' => 0, 'rezago' => 0, 'alerta' => false]; }
+    $edad = (new DateTime('today'))->diff($fn)->y;
+    $esperada = (strcasecmp(trim($nivel), 'Inicial') === 0) ? 4 : ((int)$grado + 5);
+    $rez = $edad - $esperada;
+    return ['edad' => $edad, 'esperada' => $esperada, 'rezago' => $rez, 'alerta' => ($rez >= 2)];
+}
+
+// ============================================================================
 // INICIALIZACIÓN (si es necesario)
 // ============================================================================
 

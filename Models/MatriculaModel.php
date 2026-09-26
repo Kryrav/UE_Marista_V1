@@ -27,13 +27,24 @@
         }
 
         // Insertar matricula nueva (genera 10 pensiones vía SP)
-        public function insertMatricula(string $strCi, int $intGestion, int $intIdParalelo, string $strTipoMatricula, string $strFolio, string $strStatus)
+        // I3: $userId fija created_by + id_user real (el SP deja 1). Tolerante.
+        public function insertMatricula(string $strCi, int $intGestion, int $intIdParalelo, string $strTipoMatricula, string $strFolio, string $strStatus, ?int $userId = null)
         {
             try {
                 $sql = "CALL matricular_estudiante_y_generar_pensiones(?,?,?,?,?,?)";
                 $arrData = array($strCi, $intGestion, $intIdParalelo, $strTipoMatricula, $strFolio, $strStatus);
                 $request_insert = $this->insert($sql, $arrData);
                 if ($request_insert) {
+                    if($userId !== null && $userId > 0){
+                        try {
+                            $this->update("UPDATE matricula SET created_by = ?, id_user = ? WHERE id_matricula = (
+                                SELECT id_matricula FROM (SELECT m.id_matricula FROM matricula m
+                                 INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+                                 INNER JOIN persona p ON e.id_persona = p.id_persona
+                                 WHERE p.ci = ? AND m.gestion = ? ORDER BY m.id_matricula DESC LIMIT 1) t)",
+                                [$userId, $userId, $strCi, $intGestion]);
+                        } catch (Exception $x) {}
+                    }
                     return "matricula_guardada";
                 }
                 return "Error al guardar";
@@ -150,7 +161,8 @@
 
         // Actualizar matrícula existente (no regenera pensiones)
         // ITERACIÓN 2: motivo_estado opcional (M02, tolerante si la columna no existe).
-        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '')
+        // I3: $userId fija updated_by (tolerante).
+        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '', ?int $userId = null)
         {
             $motivo = trim($motivo);
             try {
@@ -159,6 +171,9 @@
             } catch (Exception $e) {
                 $sql = "UPDATE matricula SET id_paralelo = ?, tipo = ?, folio = ?, estado_inscripcion = ? WHERE id_matricula = ?";
                 $ok = $this->update($sql, [$idParalelo, $tipo, $folio, $estadoInscripcion, $idMatricula]);
+            }
+            if($ok && $userId !== null && $userId > 0){
+                try { $this->update("UPDATE matricula SET updated_by = ? WHERE id_matricula = ?", [$userId, $idMatricula]); } catch (Exception $x) {}
             }
             return $ok ? "matricula_actualizada" : false;
         }

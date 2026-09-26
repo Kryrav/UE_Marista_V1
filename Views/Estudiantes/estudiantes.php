@@ -7,10 +7,11 @@
   <main class="app-content">    
       <div class="app-title">
         <div>
-            <h1><i class="fa fa-graduation-cap"></i> <?= $data['page_title'] ?>
+                <h1><i class="fa fa-graduation-cap"></i> <?= $data['page_title'] ?>
                 <?php if($_SESSION['permisosMod']['w']){ ?>
                 <button class="btn btn-primary" type="button" onclick="openModal();" ><i class="fas fa-plus-circle"></i> Nuevo</button>
               <?php } ?>
+                <a class="btn btn-warning ml-2" target="_blank" href="<?= base_url(); ?>/Estudiantes/rezagados" title="Reporte de rezago 2+ años para Comisión Técnica"><i class="fa fa-exclamation-triangle"></i> Rezago</a>
             </h1>
         </div>
         <ul class="app-breadcrumb breadcrumb">

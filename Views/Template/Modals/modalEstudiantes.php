@@ -110,6 +110,37 @@
                     <textarea class="form-control" id="txtEmergencia" name="txtEmergencia" rows="2"></textarea>
                   </div>
                 </div>
+                <p class="text-primary">Inclusión y apoyo (no bloquea la inscripción)</p>
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <div class="form-check mt-4">
+                      <input type="checkbox" class="form-check-input" id="tieneDisc" name="tieneDisc" value="1">
+                      <label class="form-check-label" for="tieneDisc">Con discapacidad</label>
+                    </div>
+                  </div>
+                  <div class="form-group col-md-8">
+                    <label for="tipoDisc">Tipo de discapacidad</label>
+                    <input type="text" class="form-control" id="tipoDisc" name="tipoDisc" maxlength="100" placeholder="Ej. auditiva, visual, intelectual...">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-md-6">
+                    <label for="adaptaciones">Adaptaciones requeridas</label>
+                    <textarea class="form-control" id="adaptaciones" name="adaptaciones" rows="2" placeholder="Ej. ubicación en primera fila, material ampliado"></textarea>
+                  </div>
+                  <div class="form-group col-md-6">
+                    <label for="centroEspecial">Centro especial (matrícula paralela)</label>
+                    <input type="text" class="form-control" id="centroEspecial" name="centroEspecial" maxlength="150" placeholder="Vacío si no aplica">
+                    <div class="form-check mt-2">
+                      <input type="checkbox" class="form-check-input" id="matParalela" name="matParalela" value="1">
+                      <label class="form-check-label" for="matParalela">Matrícula paralela en centro especial</label>
+                    </div>
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="reqComision" name="reqComision" value="1">
+                      <label class="form-check-label" for="reqComision">Requiere Comisión Técnica</label>
+                    </div>
+                  </div>
+                </div>
                 <div class="form-row">
                   <div class="form-group col-md-6">
                       <label for="listStatus">Estado</label>
@@ -228,6 +259,7 @@
       <div class="modal-body">
         <div class="row text-center mb-3" id="fichaKpis"></div>
         <div class="legajo-strip" id="legajoStrip"></div>
+        <div class="legajo-strip" id="inclusionStrip" style="display:none;"></div>
         <ul class="nav nav-tabs ficha-tabs" id="fichaTabs" role="tablist">
           <li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#tabDatos" role="tab">Datos</a></li>
           <li class="nav-item"><a class="nav-link" data-toggle="tab" href="#tabTutores" role="tab">Tutores <span class="badge badge-warning" id="cntTutores">0</span></a></li>

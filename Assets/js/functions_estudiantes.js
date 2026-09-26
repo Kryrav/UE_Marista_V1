@@ -113,11 +113,15 @@ document.addEventListener('DOMContentLoaded', function(){
                     let objData = JSON.parse(request.responseText);
                     if(objData.status)
                     {
-                        tableEstudiantes.api().ajax.reload(null, false);
-                        rowTable = "";
-                        $('#modalFormEstudiantes').modal("hide");
-                        formEstudiante.reset();
-                        swal("Estudiantes", objData.msg, "success");
+                        let nuevoId = objData.id || 0;
+                        // I3: guardar inclusión/apoyo con el id creado (no bloquea el alta)
+                        fntSaveInclusion(nuevoId, function(){
+                            tableEstudiantes.api().ajax.reload(null, false);
+                            rowTable = "";
+                            $('#modalFormEstudiantes').modal("hide");
+                            formEstudiante.reset();
+                            swal("Estudiantes", objData.msg, "success");
+                        });
                     }else{
                         swal("Error", objData.msg, "error");
                     }
@@ -330,7 +334,7 @@ function fntViewEstudiante(idEstudiante){
                 if(objData.ficha.matriculas.length === 0){ hm = '<p class="text-muted mb-0">Sin matrículas.</p>'; }
                 objData.ficha.matriculas.forEach(function(m){
                     let mot = m.motivo_estado ? ' · <small class="text-muted">Motivo: ' + escHtml(m.motivo_estado) + '</small>' : '';
-                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + mot + '</span></div>';
+                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + mot + '</span> <a class="btn btn-outline-secondary btn-sm ml-2" target="_blank" href="' + base_url + '/Matricula/comprobante/' + m.id_matricula + '" title="Comprobante de matrícula"><i class="fa fa-print"></i></a></div>';
                 });
                 document.querySelector("#fichaMatriculas").innerHTML = hm
                     + '<button class="btn btn-success btn-sm mt-2" onclick="fntRematricularDesdeFicha()"><i class="fa fa-forward"></i> Rematricular</button>';
@@ -355,6 +359,20 @@ function fntViewEstudiante(idEstudiante){
                 document.querySelector("#legajoStrip").innerHTML = legHtml;
 
                 document.querySelector("#cntTutores").innerHTML = objData.ficha.tutores.length;
+                // I3: tira de inclusión/apoyo
+                let inc = objData.ficha.inclusion || {};
+                let incStrip = document.querySelector("#inclusionStrip");
+                if(incStrip){
+                    if(inc.tiene_discapacidad == 1 || inc.requiere_comision == 1 || inc.matricula_paralela == 1){
+                        let bits = [];
+                        if(inc.tiene_discapacidad == 1) bits.push('<span class="badge badge-info">Discapacidad: ' + escHtml(inc.tipo_discapacidad || 'registrada') + '</span>');
+                        if(inc.matricula_paralela == 1) bits.push('<span class="badge badge-primary">Paralela: ' + escHtml(inc.centro_especial || 'centro especial') + '</span>');
+                        if(inc.requiere_comision == 1) bits.push('<span class="badge badge-warning">Comisión Técnica</span>');
+                        if(inc.adaptaciones) bits.push('<small class="text-muted">' + escHtml(inc.adaptaciones) + '</small>');
+                        incStrip.innerHTML = '<i class="fa fa-universal-access"></i> ' + bits.join(' ');
+                        incStrip.style.display = '';
+                    }else{ incStrip.innerHTML = ''; incStrip.style.display = 'none'; }
+                }
                 // Vuelve siempre a la pestaña Datos al abrir
                 let firstTab = document.querySelector('#fichaTabs .nav-link');
                 if(window.jQuery && firstTab){ window.jQuery(firstTab).tab('show'); }
@@ -406,6 +424,8 @@ function fntEditEstudiante(element, idEstudiante){
                 document.querySelector("#txtEstante").value = d.estante || "";
                 document.querySelector("#txtGaveta").value = d.gaveta || "";
                 document.querySelector("#listEstadoLeg").value = d.estado_legajo || "";
+                // I3: inclusión del estudiante
+                fntLoadInclusion(d.id_estudiante);
                 document.querySelector('#boxMatricular').style.display = 'none';
                 // En edición el paso 3 no existe: se oculta su indicador
                 document.querySelector('.est-steps li[data-step="3"]').style.display = 'none';
@@ -436,6 +456,60 @@ document.addEventListener('keydown', function(e){
         if(lb) lb.style.display = 'none';
     }
 });
+
+// ---------- Inclusión / apoyo (I3) ----------
+function fntLoadInclusion(idEstudiante){
+    document.querySelector('#tieneDisc').checked = false;
+    document.querySelector('#tipoDisc').value = "";
+    document.querySelector('#adaptaciones').value = "";
+    document.querySelector('#centroEspecial').value = "";
+    document.querySelector('#matParalela').checked = false;
+    document.querySelector('#reqComision').checked = false;
+    if(!idEstudiante) return;
+    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    request.open("GET", base_url + '/Estudiantes/getInclusion/' + idEstudiante, true);
+    request.send();
+    request.onreadystatechange = function(){
+        if(request.readyState == 4 && request.status == 200){
+            try {
+                let o = JSON.parse(request.responseText);
+                if(o.status && o.data){
+                    let d = o.data;
+                    document.querySelector('#tieneDisc').checked = (d.tiene_discapacidad == 1);
+                    document.querySelector('#tipoDisc').value = d.tipo_discapacidad || "";
+                    document.querySelector('#adaptaciones').value = d.adaptaciones || "";
+                    document.querySelector('#centroEspecial').value = d.centro_especial || "";
+                    document.querySelector('#matParalela').checked = (d.matricula_paralela == 1);
+                    document.querySelector('#reqComision').checked = (d.requiere_comision == 1);
+                }
+            } catch(e){}
+        }
+    }
+}
+
+function fntSaveInclusion(idEstudiante, done){
+    let hayDatos = document.querySelector('#tieneDisc').checked
+        || document.querySelector('#tipoDisc').value.trim() !== ''
+        || document.querySelector('#adaptaciones').value.trim() !== ''
+        || document.querySelector('#centroEspecial').value.trim() !== ''
+        || document.querySelector('#matParalela').checked
+        || document.querySelector('#reqComision').checked;
+    if(!idEstudiante || !hayDatos){ done(); return; }
+    let fd = new FormData();
+    fd.append('idEstudianteInc', idEstudiante);
+    fd.append('tieneDisc', document.querySelector('#tieneDisc').checked ? '1' : '');
+    fd.append('tipoDisc', document.querySelector('#tipoDisc').value);
+    fd.append('adaptaciones', document.querySelector('#adaptaciones').value);
+    fd.append('centroEspecial', document.querySelector('#centroEspecial').value);
+    fd.append('matParalela', document.querySelector('#matParalela').checked ? '1' : '');
+    fd.append('reqComision', document.querySelector('#reqComision').checked ? '1' : '');
+    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    request.open("POST", base_url + '/Estudiantes/saveInclusion', true);
+    request.send(fd);
+    request.onreadystatechange = function(){
+        if(request.readyState == 4 && request.status == 200){ done(); }
+    }
+}
 
 // ---------- Tutores ----------
 let fichaIdEstudiante = 0;

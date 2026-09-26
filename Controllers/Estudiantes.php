@@ -131,14 +131,16 @@
 				if(!$_SESSION['permisosMod']['w']){ echo json_encode(array("status"=>false,"msg"=>'Sin permiso para crear.'), JSON_UNESCAPED_UNICODE); die(); }
 				// Acceso inicial = C.I. Los cambios de clave son del módulo Usuarios.
 				$strPassword = password_hash($strCi, PASSWORD_DEFAULT);
-				$request = $this->model->insertEstudiante($strCi,$strRUDE,$strlistEst,$strNombre,$strApellido,$strSex,$strTelefono,$strEmail,$strDireccion,$dateFNacimiento,$strPais,$strCiudad,$strProvincia,$strColegioProc,$strEmergencia,$intTipoId,$strPassword,$intStatus,$fotoName,$folio,$estante !== '' ? $estante : null,$gaveta !== '' ? $gaveta : null,$estadoLegajo);
+				$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
+				$request = $this->model->insertEstudiante($strCi,$strRUDE,$strlistEst,$strNombre,$strApellido,$strSex,$strTelefono,$strEmail,$strDireccion,$dateFNacimiento,$strPais,$strCiudad,$strProvincia,$strColegioProc,$strEmergencia,$intTipoId,$strPassword,$intStatus,$fotoName,$folio,$estante !== '' ? $estante : null,$gaveta !== '' ? $gaveta : null,$estadoLegajo,$uid);
 				$okMsg = 'Estudiante registrado correctamente.';
 			}else{
 				if($idEstudiante <= 0){ echo json_encode(array("status"=>false,"msg"=>'ID inválido.'), JSON_UNESCAPED_UNICODE); die(); }
 				if(!$_SESSION['permisosMod']['u']){ echo json_encode(array("status"=>false,"msg"=>'Sin permiso para editar.'), JSON_UNESCAPED_UNICODE); die(); }
 				// Vacío = el modelo conserva el hash actual (la clave solo se cambia en Usuarios).
 				$strPassword = "";
-				$request = $this->model->updateEstudiante($idEstudiante,$strCi,$strRUDE,$strlistEst,$strNombre,$strApellido,$strSex,$strTelefono,$strEmail,$strDireccion,$dateFNacimiento,$strPais,$strCiudad,$strProvincia,$strColegioProc,$strEmergencia,$intTipoId,$strPassword,$intStatus,$fotoChanged ? $fotoName : null,$folio,$estante !== '' ? $estante : null,$gaveta !== '' ? $gaveta : null,$estadoLegajo);
+				$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
+				$request = $this->model->updateEstudiante($idEstudiante,$strCi,$strRUDE,$strlistEst,$strNombre,$strApellido,$strSex,$strTelefono,$strEmail,$strDireccion,$dateFNacimiento,$strPais,$strCiudad,$strProvincia,$strColegioProc,$strEmergencia,$intTipoId,$strPassword,$intStatus,$fotoChanged ? $fotoName : null,$folio,$estante !== '' ? $estante : null,$gaveta !== '' ? $gaveta : null,$estadoLegajo,$uid);
 				$okMsg = 'Estudiante actualizado correctamente.';
 			}
 
@@ -317,6 +319,67 @@
 					echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);
 				}
 			}
+			die();
+		}
+
+		//Baja segura
+		// ITERACIÓN 3 (F-07): búsqueda server-side para autocompletado (top 20).
+		public function buscar()
+		{
+			if($_SESSION['permisosMod']['r']){
+				$q = trim(strClean($_GET['q'] ?? ''));
+				if(strlen($q) < 2){ echo json_encode(array('status'=>true,'data'=>[]), JSON_UNESCAPED_UNICODE); die(); }
+				echo json_encode(array('status'=>true,'data'=>$this->model->buscarEstudiantes($q) ?: []), JSON_UNESCAPED_UNICODE);
+			}
+			die();
+		}
+
+		// ITERACIÓN 3 (N-03): reporte imprimible de rezago 2+ años (Comisión Técnica).
+		public function rezagados()
+		{
+			if(empty($_SESSION['permisosMod']['r'])){
+				header("Location:".base_url().'/dashboard');
+				die();
+			}
+			$cand = $this->model->rezagoCandidates() ?: [];
+			$rows = [];
+			foreach($cand as $c){
+				$r = calculaRezago($c['fnacimiento'] ?? '', $c['nivel'] ?? '', $c['grado'] ?? 0);
+				if($r['alerta']){ $rows[] = array_merge($c, $r); }
+			}
+			$data['page_tag'] = "Rezago escolar";
+			$data['rows'] = $rows;
+			$data['emision'] = date('d/m/Y H:i');
+			$data['usuario_emisor'] = $_SESSION['userData']['nombre'] ?? '';
+			require_once("Views/Estudiantes/rezagados.php");
+			die();
+		}
+
+		// ITERACIÓN 3: inclusión/apoyo de un estudiante.
+		public function getInclusion(int $idEstudiante)
+		{
+			if($_SESSION['permisosMod']['r'] && $idEstudiante > 0){
+				echo json_encode(array('status'=>true,'data'=>$this->model->getInclusion($idEstudiante)), JSON_UNESCAPED_UNICODE);
+			}
+			die();
+		}
+
+		public function saveInclusion()
+		{
+			if(!$_POST){ die(); }
+			$idEst = intval($_POST['idEstudianteInc'] ?? 0);
+			if($idEst <= 0){ echo json_encode(array('status'=>false,'msg'=>'Estudiante inválido.'), JSON_UNESCAPED_UNICODE); die(); }
+			if(!$_SESSION['permisosMod']['u'] && !$_SESSION['permisosMod']['w']){ echo json_encode(array('status'=>false,'msg'=>'Sin permiso.'), JSON_UNESCAPED_UNICODE); die(); }
+			$uid = intval($_SESSION['idUser'] ?? 0) ?: null;
+			$ok = $this->model->saveInclusion($idEst, [
+				'tiene_discapacidad' => !empty($_POST['tieneDisc']),
+				'tipo_discapacidad' => strClean($_POST['tipoDisc'] ?? ''),
+				'adaptaciones' => strClean($_POST['adaptaciones'] ?? ''),
+				'centro_especial' => strClean($_POST['centroEspecial'] ?? ''),
+				'matricula_paralela' => !empty($_POST['matParalela']),
+				'requiere_comision' => !empty($_POST['reqComision']),
+			], $uid);
+			echo json_encode($ok ? array('status'=>true,'msg'=>'Inclusión guardada.') : array('status'=>false,'msg'=>'No se pudo guardar.'), JSON_UNESCAPED_UNICODE);
 			die();
 		}
 
