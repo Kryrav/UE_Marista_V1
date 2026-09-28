@@ -108,7 +108,9 @@ document.addEventListener('DOMContentLoaded', function(){
             request.open("POST", base_url + '/Estudiantes/setEstudiante', true);
             request.send(new FormData(formEstudiante));
             request.onreadystatechange = function(){
-                if(request.readyState == 4 && request.status == 200){
+                if(request.readyState == 4){
+                    // REV-Est: ante fallo de red no dejar el spinner colgado
+                    if(request.status != 200){ divLoading.style.display = "none"; swal("Error", "Fallo de red. Verifique si el estudiante se guardó antes de reintentar.", "error"); return false; }
                     divLoading.style.display = "none";
                     let objData = JSON.parse(request.responseText);
                     if(objData.status)
@@ -510,8 +512,10 @@ function fntSaveInclusion(idEstudiante, done){
     request.open("POST", base_url + '/Estudiantes/saveInclusion', true);
     request.send(fd);
     request.onreadystatechange = function(){
-        if(request.readyState == 4 && request.status == 200){ done(); }
+        // REV-Est: best-effort — la inclusión no debe colgar el alta si falla la red
+        if(request.readyState == 4){ done(); }
     }
+    request.onerror = function(){ done(); };
 }
 
 // ---------- Tutores ----------

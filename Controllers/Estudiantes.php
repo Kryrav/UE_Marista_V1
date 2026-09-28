@@ -88,14 +88,14 @@
 				echo json_encode(array("status"=>false,"msg"=>$err), JSON_UNESCAPED_UNICODE); die();
 			}
 			$idEstudiante = intval($_POST['idEstudiante'] ?? 0);
-			$strCi = strClean($_POST['txtCi']);
-			$strRUDE = strClean($_POST['txtRUDE']);
+			$strCi = strClean($_POST['txtCi'] ?? '');
+			$strRUDE = strClean($_POST['txtRUDE'] ?? '');
 			$strlistEst = strClean($_POST['listEst'] ?? 'Nuevo');
-			$strNombre = ucwords(strClean($_POST['txtNombre']));
-			$strApellido = ucwords(strClean($_POST['txtApellido']));
+			$strNombre = ucwords(strClean($_POST['txtNombre'] ?? ''));
+			$strApellido = ucwords(strClean($_POST['txtApellido'] ?? ''));
 			$strSex = strClean($_POST['listSexEst'] ?? 'M');
-			$strTelefono = preg_replace('/[^0-9]/','', $_POST['txtCelular']);
-			$strEmail = strtolower(strClean($_POST['txtEmail']));
+			$strTelefono = preg_replace('/[^0-9]/','', (string)($_POST['txtCelular'] ?? ''));
+			$strEmail = strtolower(strClean($_POST['txtEmail'] ?? ''));
 			$strDireccion = strClean($_POST['txtDireccion'] ?? '');
 			$dateFNacimiento = strClean($_POST['dateFNacimiento']);
 			$strPais = strClean($_POST['txtPais'] ?? 'Bolivia');
@@ -188,7 +188,8 @@
 			$faltaDif = (trim($post['txtRUDE'] ?? '') === '' || trim($post['txtEmail'] ?? '') === '' || trim($post['txtCelular'] ?? '') === '');
 			$docPend = !empty($post['chkDocPendiente']) || $faltaDif;
 			$estado = $docPend ? 'Pendiente_Documentos' : 'Confirmado';
-			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', $estado);
+			$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // REV-Est: auditoría también en matrícula inmediata
+			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', $estado, $uid);
 			if($res == "matricula_guardada"){
 				$extra = "";
 				if($docPend){
@@ -323,7 +324,7 @@
 			die();
 		}
 
-		//Baja segura
+		//Baja segura: solo sin matrículas activas; si no, informa (has_matricula)
 		// ITERACIÓN 3 (F-07): búsqueda server-side para autocompletado (top 20).
 		public function buscar()
 		{
