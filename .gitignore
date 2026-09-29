@@ -7,3 +7,5 @@ Backups/**/*.sql
 # Logs vacíos de respaldo: solo local
 Backups/*.log
 Backups/**/*.log
+# Snapshots golden con datos reales (CI/nombres): solo local, se regeneran
+Tools/migraciones/golden_*.json

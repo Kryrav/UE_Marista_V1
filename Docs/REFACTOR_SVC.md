@@ -38,3 +38,7 @@ contra el caso de `Estudiantes::matricularNuevo`.
 - `test_svc_integracion.php`: g1–g7 contra BD real (tutotes, cobros, cursos, gestión, login, pensiones-perfil, materias).
 - Regresión: M02, M03 parcial, flujo óptimo, REV-MAT/EST, CSRF, M05, golden Dashboard/Reportes **byte-idéntico**.
 - `php -l` + `node --check` en todo lo tocado. Sin restos (`left=0`).
+- Nota de privacidad: `Tools/migraciones/golden_finanzas.json` NO se versiona
+  (contiene CI/nombres reales de morosos y sin-tutores); se regenera local con
+  `php Tools/migraciones/test_golden_finanzas.php capture` y se compara con
+  `... compare`. Igual criterio que `Backups/*.sql`.
