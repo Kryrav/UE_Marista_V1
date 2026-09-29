@@ -307,6 +307,8 @@
 					if($_SESSION['permisosMod']['r']){ $btns .= '<button class="btn btn-info btn-sm" onClick="fntViewEstudiante('.$id.')" title="Ficha del estudiante"><i class="far fa-eye"></i></button> '; }
 					if($_SESSION['permisosMod']['u']){ $btns .= '<button class="btn btn-primary btn-sm" onClick="fntEditEstudiante(this,'.$id.')" title="Editar"><i class="fas fa-pencil-alt"></i></button> '; }
 					if($_SESSION['permisosMod']['d']){ $btns .= '<button class="btn btn-danger btn-sm" onClick="fntDelEstudiante('.$id.')" title="Dar de baja"><i class="far fa-trash-alt"></i></button> '; }
+					// FLUJO: matricular existente sin historial (alta sin chkMatricular)
+					if($_SESSION['permisosMod']['w']){ $btns .= '<button class="btn btn-success btn-sm" onClick="fntMatricularExistente(\''.htmlspecialchars($v['ci'] ?? '', ENT_QUOTES).'\')" title="Matricular (primera vez o rematricular)"><i class="fas fa-forward"></i></button> '; }
 					$btns .= '<button class="btn btn-warning btn-sm" onClick="fntTutoresEstudiante('.$id.')" title="Ver tutores"><i class="fas fa-users"></i></button>';
 					$arrData[$k]['options'] = '<div class="text-center text-nowrap">'.$btns.'</div>';
 				}

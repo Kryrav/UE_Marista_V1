@@ -43,9 +43,39 @@ if ($caso === 'p1') {
   $p = $rc->getProperty('model'); $p->setAccessible(true);
   $p->setValue($c, new EstudiantesModel());
   $c->setEstudiante();
-} elseif ($caso === 'clean') {
-  $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
-  foreach (['TEST-FLUJO-01'] as $ci) {
+} elseif ($caso === 'r1') {
+  // primera matrícula vía rematricular (alta previa sin chkMatricular)
+  $ci2 = 'TEST-FLUJO-02';
+  $est = new EstudiantesModel();
+  echo 'alta2: '.$est->insertEstudiante($ci2, '', 'Nuevo', 'Flujo', 'Dos', 'M', '', '', 'Dir', '2015-05-01', 'Bolivia', '', '', '', '', '7', password_hash($ci2, PASSWORD_DEFAULT), 1, null, null, null, null, null, 1)."\n";
+  require_once 'Controllers/Matricula.php';
+  if (session_status() === PHP_SESSION_NONE) { session_start(); }
+  $_SESSION['login'] = true; $_SESSION['idUser'] = 1;
+  $_SESSION['permisosMod'] = ['r' => 1, 'w' => 1, 'u' => 1, 'd' => 1];
+  $_SESSION['userData'] = ['idrol' => 1];
+  $_SESSION['csrf_token'] = 'TOK';
+  $_POST = ['ci' => $ci2, 'gestion' => '2026', 'paralelo' => $par, 'tipo' => 'Regular', 'csrf_token' => 'TOK'];
+  $rc = new ReflectionClass('Matricula');
+  $c = $rc->newInstanceWithoutConstructor();
+  $p = $rc->getProperty('model'); $p->setAccessible(true);
+  $p->setValue($c, new MatriculaModel());
+  $c->rematricular();
+} elseif ($caso === 'r2') {
+  // CI inexistente -> rechazo claro
+  require_once 'Controllers/Matricula.php';
+  if (session_status() === PHP_SESSION_NONE) { session_start(); }
+  $_SESSION['login'] = true; $_SESSION['idUser'] = 1;
+  $_SESSION['permisosMod'] = ['r' => 1, 'w' => 1, 'u' => 1, 'd' => 1];
+  $_SESSION['userData'] = ['idrol' => 1];
+  $_SESSION['csrf_token'] = 'TOK';
+  $_POST = ['ci' => 'CI-FANTASMA-00', 'gestion' => '2026', 'paralelo' => $par, 'tipo' => 'Regular', 'csrf_token' => 'TOK'];
+  $rc = new ReflectionClass('Matricula');
+  $c = $rc->newInstanceWithoutConstructor();
+  $p = $rc->getProperty('model'); $p->setAccessible(true);
+  $p->setValue($c, new MatriculaModel());
+  $c->rematricular();
+} elseif ($caso === 'clean') {  $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
+  foreach (['TEST-FLUJO-01', 'TEST-FLUJO-02'] as $ci) {
     $q = $pdo->quote($ci);
     $pdo->exec("DELETE p FROM pensiones p INNER JOIN matricula m ON p.id_matricula=m.id_matricula INNER JOIN estudiante e ON m.id_estudiante=e.id_estudiante INNER JOIN persona pp ON e.id_persona=pp.id_persona WHERE pp.ci=$q");
     $pdo->exec("DELETE m FROM matricula m INNER JOIN estudiante e ON m.id_estudiante=e.id_estudiante INNER JOIN persona pp ON e.id_persona=pp.id_persona WHERE pp.ci=$q");

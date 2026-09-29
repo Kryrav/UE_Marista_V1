@@ -241,7 +241,33 @@ function fntRematricular(ci){
     request.onreadystatechange = function(){
         if(request.readyState == 4 && request.status == 200){
             let o = JSON.parse(request.responseText);
-            if(!o.status){ swal("Error", o.msg, "error"); return; }
+            if(!o.status){
+                // FLUJO: sin historial también se puede matricular (primera vez).
+                // Se abre el modal con el CI precargado en gestión activa.
+                if(o.msg && o.msg.indexOf('Sin matrículas previas') !== -1){
+                    window._rematMode = true;
+                    window._revConfirmed = false;
+                    document.querySelector("#formNewMatricula").reset();
+                    document.querySelector('#newG').value = "1";
+                    document.querySelector('#idMatricula').value = "0";
+                    document.querySelector('#txtCi').value = ci;
+                    document.querySelector('#txtCi').disabled = true;
+                    document.querySelector('#titleModal').innerHTML = "Matricular existente (" + ci + ")";
+                    document.querySelector('#btnText').innerHTML = "Matricular";
+                    let dest = new Date().getFullYear();
+                    let bga = document.querySelector('#badgeGestionActiva');
+                    if(bga && parseInt(bga.dataset.gestion)) dest = parseInt(bga.dataset.gestion);
+                    document.querySelector('#intGestion').value = dest;
+                    document.querySelector('#listStateInscripcion').value = 'Inscrito';
+                    let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+                    let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
+                    fntListParalelos(dest);
+                    toggleRectBox();
+                    $('#modalFormMatricula').modal('show');
+                    return;
+                }
+                swal("Error", o.msg, "error"); return;
+            }
             let d = o.data;
             window._rematMode = true;
             window._revConfirmed = false;

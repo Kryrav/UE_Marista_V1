@@ -131,9 +131,9 @@ document.addEventListener('DOMContentLoaded', function(){
                             rowTable = "";
                             $('#modalFormEstudiantes').modal("hide");
                             formEstudiante.reset();
-                            // FLUJO-ÓPTIMO (5): éxito accionable si hubo matrícula
-                            if(objData.idMatricula && typeof fntExitoMatricula === 'function'){
-                                fntExitoMatricula({msg: objData.msg, idMat: objData.idMatricula, idEst: nuevoId});
+                            // FLUJO-ÓPTIMO (5): éxito accionable (con o sin matrícula inmediata)
+                            if(typeof fntExitoMatricula === 'function' && (objData.idMatricula || nuevoId)){
+                                fntExitoMatricula({msg: objData.msg, idMat: objData.idMatricula || 0, idEst: nuevoId});
                             }else{
                                 swal("Estudiantes", objData.msg, "success");
                             }
@@ -561,6 +561,13 @@ function fntSaveInclusion(idEstudiante, done){
         if(request.readyState == 4){ done(); }
     }
     request.onerror = function(){ done(); };
+}
+
+// FLUJO: matricular existente (con o sin historial) desde la tabla
+function fntMatricularExistente(ci){
+    if(!ci){ swal("Error", "CI inválido.", "error"); return; }
+    try { sessionStorage.setItem('remat_ci', ci); } catch(e){}
+    window.location.href = base_url + '/Matricula';
 }
 
 // ---------- Tutores ----------

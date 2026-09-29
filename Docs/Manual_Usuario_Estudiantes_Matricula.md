@@ -29,7 +29,8 @@
 **Paso 3 Acceso y matrícula:**
 - Aviso: la clave inicial es el C.I.; se cambia en `Usuarios`.
 - `☑ Matricular de una vez` + `Paralelo` + `Tipo Regular/Becado`. Verá un **resumen vivo** (curso, gestión, total en pensiones y avisos: duplicado, cupo, tutores) antes de guardar.
-- Al guardar aparece la **pantalla de éxito** con siguientes pasos: comprobante, pensiones, vincular tutor e inscribir otro.
+- Si **no** tilda matricular, el estudiante queda registrado sin matrícula: después use el botón verde `⏩` de su fila en `Estudiantes` (o `Rematricular` en Matrícula con su CI) para matricularlo por primera vez.
+- Al guardar aparece la **pantalla de éxito** con siguientes pasos: comprobante, pensiones, vincular tutor e inscribir otro. Sin matrícula también ofrece vincular tutor.
 - **NUEVO M01 — Documentación pendiente:** tílde `Documentación pendiente` si falta `Cert. nacimiento / RUDE / Solicitud`. Marque lo entregado, deje `Compromiso firmado` tildado y agregue observación si quiere. `Guardar`.
 
 Resultado: `Estudiante registrado... Matriculado en gestión 2026... Documentación pendiente hasta 2026-XX-XX`.
@@ -71,7 +72,8 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## 6. Tutores / apoderados
 
-- Desde fila `👥` verá tutores o aviso `sin tutor`. Para agregar: `Tutores > Nuevo >` busque CI (si existe se prellena, no duplique) `> seleccione estudiante > Parentesco Padre/Madre/Tutor > Guardar`.
+- Desde la fila `👥` verá tutores o aviso `sin tutor`. Para agregar: `Tutores > Nuevo >` busque CI (si existe se prellena, no duplique) `> seleccione estudiante > Parentesco Padre/Madre/Tutor > Guardar`.
+- Atajos: tras un alta o matrícula, la pantalla de éxito trae **Vincular tutor** (abre Tutores con el estudiante preseleccionado).
 - Se permiten varios (padre + madre + tutor). `☑ Mismo domicilio` copia la dirección del estudiante.
 
 ## 7. Editar, corregir RUDE/email después y dar de baja

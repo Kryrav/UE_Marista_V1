@@ -351,19 +351,31 @@
 					}
 				}
 				if($tipo === ''){ $tipo = 'Regular'; }
+				// FLUJO: también sirve para PRIMERA matrícula de un existente sin historial
+				// (alta sin chkMatricular). Si no hay última, se inscribe como nuevo en destino.
 				$last = $this->model->ultimaMatriculaByCi($ci);
-				if(empty($last)){
-					echo json_encode(array("status"=>false,"msg"=>'El CI no tiene matrículas previas; use Nueva Matrícula.'),JSON_UNESCAPED_UNICODE);die();
+				$esPrimera = empty($last);
+				if($esPrimera){
+					// Debe existir el estudiante (aunque sea sin matrículas)
+					$ex = $this->model->select(
+						"SELECT e.id_estudiante FROM estudiante e INNER JOIN persona p ON e.id_persona=p.id_persona WHERE p.ci=? AND e.status != 0", [$ci]);
+					if(empty($ex)){
+						echo json_encode(array("status"=>false,"msg"=>'El CI no existe. Registre al estudiante primero.'),JSON_UNESCAPED_UNICODE);die();
+					}
 				}
-				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', 'Inscrito', intval($_SESSION['idUser'] ?? 0) ?: null);
+				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', $esPrimera ? 'Confirmado' : 'Inscrito', intval($_SESSION['idUser'] ?? 0) ?: null);
 				if($res == "matricula_guardada"){
 					if($gAct > 0 && $gestion !== $gAct){
 						$this->model->setMotivoByCiGestion($ci, $gestion, 'Rectificación histórica: '.strClean($_POST['motivoRectificacion'] ?? ''));
 					}
 					$cursoAnt = $last['curso'] ?? '—';
 					$idEst = intval($last['id_estudiante'] ?? 0);
+					if($idEst <= 0 && isset($ex) && !empty($ex)){ $idEst = intval($ex['id_estudiante']); }
 					$new = $this->model->ultimaMatriculaByCi($ci);
-					echo json_encode(array("status"=>true,"msg"=>"Rematriculado en gestión $gestion (10 pensiones generadas). Curso anterior: $cursoAnt.",
+					$msg = $esPrimera
+						? "Matriculado en gestión $gestion (10 pensiones generadas)."
+						: "Rematriculado en gestión $gestion (10 pensiones generadas). Curso anterior: $cursoAnt.";
+					echo json_encode(array("status"=>true,"msg"=>$msg,
 						"idMatricula"=>intval($new['id_matricula'] ?? 0), "idEstudiante"=>$idEst),JSON_UNESCAPED_UNICODE);
 				}elseif($res == "matricula_existente"){
 					echo json_encode(array("status"=>false,"msg"=>'Ya está matriculado en esa gestión.'),JSON_UNESCAPED_UNICODE);
