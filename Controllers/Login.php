@@ -58,24 +58,21 @@ class Login extends Controllers
 
     private function getClientIP()
     {
-        $ipaddress = '';
-        
-        if (getenv('HTTP_CLIENT_IP'))
-            $ipaddress = getenv('HTTP_CLIENT_IP');
-        else if(getenv('HTTP_X_FORWARDED_FOR'))
-            $ipaddress = getenv('HTTP_X_FORWARDED_FOR');
-        else if(getenv('HTTP_X_FORWARDED'))
-            $ipaddress = getenv('HTTP_X_FORWARDED');
-        else if(getenv('HTTP_FORWARDED_FOR'))
-            $ipaddress = getenv('HTTP_FORWARDED_FOR');
-        else if(getenv('HTTP_FORWARDED'))
-           $ipaddress = getenv('HTTP_FORWARDED');
-        else if(getenv('REMOTE_ADDR'))
-            $ipaddress = getenv('REMOTE_ADDR');
-        else
-            $ipaddress = 'UNKNOWN';
-        
-        return $ipaddress;
+        // AUTH: headers de proxy solo si la conexión directa es un proxy confiable
+        // (localhost o red privada); si no, REMOTE_ADDR para no evadir el rate-limit.
+        $remote = getenv('REMOTE_ADDR') ?: ($_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN');
+        $trusted = ($remote === '127.0.0.1' || $remote === '::1'
+            || preg_match('/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/', (string)$remote) === 1);
+        if ($trusted) {
+            $fwd = getenv('HTTP_X_FORWARDED_FOR') ?: getenv('HTTP_CLIENT_IP') ?: '';
+            if ($fwd !== '') {
+                $ip = trim(explode(',', (string)$fwd)[0]);
+                if ($ip !== '') {
+                    return $ip;
+                }
+            }
+        }
+        return $remote ?: 'UNKNOWN';
     }
        /**
      * Helper para responder JSON y terminar la ejecución
@@ -103,14 +100,18 @@ class Login extends Controllers
             $this->responseJson(['status' => false, 'msg' => 'Complete todos los campos']);
         }
 
-        $strUsuario = strtolower(strClean($_POST['txtEmail']));
+        $strUsuario = strClean($_POST['txtEmail']);
+        // AUTH: minúsculas solo para emails; los CI alfanuméricos son case-sensitive
+        if (strpos($strUsuario, '@') !== false) {
+            $strUsuario = strtolower($strUsuario);
+        }
         $strPassword = $_POST['txtPassword']; // Se envía en texto plano, el modelo se encargará de hashearla
         
         $ipUsuario = $this->getClientIP();
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
-        // Rate limiting
-        $estaBloqueado = $this->model->verificarBloqueo($strUsuario, 15, 5);
+        // Rate limiting (umbrales de $loginConfig, única fuente)
+        $estaBloqueado = $this->model->verificarBloqueo($strUsuario, $this->loginConfig['rate_limit_minutes'], $this->loginConfig['rate_limit_attempts']);
         if ($estaBloqueado) {
             $this->model->registrarIntentoLogin($strUsuario, false, $ipUsuario, $userAgent);
             $this->responseJson(['status' => false, 'msg' => 'Demasiados intentos. Espere 15 minutos.']);
@@ -191,43 +192,38 @@ class Login extends Controllers
 
             $url_recovery = base_url() . '/login/confirmUser/' . $strEmail . ',' . $token;
 
-            $requestUpdate = $this->model->setTokenUser($idpersona, $token);
+            // AUTH atómico: el token solo queda válido si el correo salió.
+            // Si falla el envío, se invalida para no dejar tokens huérfanos.
+            $dataUsuario = [
+                'nombreUsuario' => $nombreUsuario,
+                'email' => $strEmail,
+                'asunto' => 'Recuperar cuenta - ' . NOMBRE_REMITENTE,
+                'url_recovery' => $url_recovery
+            ];
 
-            if ($requestUpdate) {
-                $dataUsuario = [
-                    'nombreUsuario' => $nombreUsuario,
-                    'email' => $strEmail,
-                    'asunto' => 'Recuperar cuenta - ' . NOMBRE_REMITENTE,
-                    'url_recovery' => $url_recovery
-                ];
+            // Intentar enviar por PHPMailer primero
+            $sendEmail = sendMailLocal($dataUsuario, 'email_cambioPassword');
 
-                // Intentar enviar por PHPMailer primero
-                $sendEmail = sendMailLocal($dataUsuario, 'email_cambioPassword');
-                
-                // Si falla, intentar con mail() nativo
-                if (!$sendEmail) {
-                    $sendEmail = sendEmail($dataUsuario, 'email_cambioPassword');
-                }
+            // Si falla, intentar con mail() nativo
+            if (!$sendEmail) {
+                $sendEmail = sendEmail($dataUsuario, 'email_cambioPassword');
+            }
 
-                if ($sendEmail) {
-                    error_log("Email de recuperación enviado a: {$strEmail}");
-                    
-                    $arrResponse = [
-                        'status' => true, 
-                        'msg' => 'Se ha enviado un correo con instrucciones para recuperar tu contraseña'
-                    ];
-                } else {
-                    error_log("Error al enviar email de recuperación a: {$strEmail}");
-                    
-                    $arrResponse = [
-                        'status' => false, 
-                        'msg' => 'Error al enviar el correo. Por favor intente más tarde'
-                    ];
-                }
-            } else {
+            if ($sendEmail) {
+                $this->model->setTokenUser($idpersona, $token, RESET_TOKEN_MINUTES);
+                error_log("Email de recuperación enviado a: {$strEmail}");
+
                 $arrResponse = [
-                    'status' => false, 
-                    'msg' => 'Error al procesar la solicitud. Por favor intente más tarde'
+                    'status' => true,
+                    'msg' => 'Se ha enviado un correo con instrucciones para recuperar tu contraseña'
+                ];
+            } else {
+                $this->model->setTokenUser($idpersona, '');
+                error_log("Error al enviar email de recuperación a: {$strEmail}");
+
+                $arrResponse = [
+                    'status' => false,
+                    'msg' => 'Error al enviar el correo. Por favor intente más tarde'
                 ];
             }
         }
@@ -321,10 +317,10 @@ class Login extends Controllers
             die();
         }
 
-        if (strlen($strPassword) < 6) {
+        if (strlen($strPassword) < PASSWORD_MIN_LENGTH) {
             $arrResponse = [
                 'status' => false, 
-                'msg' => 'La contraseña debe tener al menos 6 caracteres'
+                'msg' => 'La contraseña debe tener al menos ' . PASSWORD_MIN_LENGTH . ' caracteres'
             ];
             echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
             die();

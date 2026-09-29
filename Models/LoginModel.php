@@ -33,33 +33,14 @@ class LoginModel extends Mysql
 // En LoginModel.php
 public function loginUser(string $usuario, string $password)
 {
-    error_log("=== LoginModel ===");
-    error_log("Usuario recibido: " . $usuario);
-    error_log("Password recibido (texto plano): " . $password);
-    error_log("Longitud password: " . strlen($password));
-    
+    // AUTH: jamás se loguean secretos (antes se registraba la clave en plano).
     $sql = "SELECT id_persona, password, status FROM persona WHERE usuario = ?";
     $request = $this->select($sql, [$usuario]);
-    
-    if ($request) {
-        error_log("Usuario encontrado en BD");
-        error_log("Hash almacenado: " . $request['password']);
-        error_log("Tipo hash: " . (strlen($request['password']) == 60 ? 'bcrypt' : 'desconocido'));
-        // Verifica la longitud real del hash
-        $hash = $request['password'];
-        error_log("Longitud real del hash: " . strlen($hash));
-        error_log("Hash en hex: " . bin2hex($hash));
-        
-        $verify = password_verify($password, $request['password']);
-        error_log("Resultado password_verify: " . ($verify ? 'true' : 'false'));
-        
-        if ($verify) {
-            return ['id_persona' => $request['id_persona'], 'status' => $request['status']];
-        }
-    } else {
-        error_log("Usuario NO encontrado en BD");
+
+    if ($request && password_verify($password, $request['password'])) {
+        return ['id_persona' => $request['id_persona'], 'status' => $request['status']];
     }
-    
+
     return false;
 }
     
@@ -102,11 +83,8 @@ public function loginUser(string $usuario, string $password)
         
         $arrData = [$this->intIdUsuario];
         $request = $this->select($sql, $arrData);
-        
-        if ($request) {
-            $_SESSION['userData'] = $request;
-        }
-        
+
+        // AUTH: el modelo no escribe sesión (lo hace el controlador); solo retorna.
         return $request;
     }
 
@@ -123,27 +101,45 @@ public function loginUser(string $usuario, string $password)
     }
 
     /**
-     * Asignar token de recuperación
+     * Asignar token de recuperación con vigencia.
      * @param int $idpersona - ID del usuario
-     * @param string $token - Token único
+     * @param string $token - Token único ('' lo invalida)
+     * @param int $minutes - vigencia en minutos
      * @return bool
      */
-    public function setTokenUser(int $idpersona, string $token)
+    public function setTokenUser(int $idpersona, string $token, int $minutes = 60)
     {
+        // Intento con vigencia (si la columna existe)
+        try {
+            if ($token === '') {
+                $ok = $this->update("UPDATE persona SET token = NULL, token_expiry = NULL WHERE id_persona = ?", [$idpersona]);
+            } else {
+                $ok = $this->update("UPDATE persona SET token = ?, token_expiry = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id_persona = ?", [$token, $minutes, $idpersona]);
+            }
+            if ($ok) { return $ok; }
+        } catch (Exception $e) {
+            // BD sin migrar: sigue abajo
+        }
         $sql = "UPDATE persona SET token = ? WHERE id_persona = ?";
         return $this->update($sql, [$token, $idpersona]);
     }
 
     /**
-     * Validar usuario y token
+     * Validar usuario y token vigente (expirado o ausente = inválido).
      * @param string $email - Email del usuario
      * @param string $token - Token de recuperación
      * @return array|false
      */
     public function getUsuario(string $email, string $token)
     {
-        $sql = "SELECT id_persona FROM persona WHERE email = ? AND token = ? AND status = 1";
-        return $this->select($sql, [$email, $token]);
+        try {
+            $sql = "SELECT id_persona FROM persona WHERE email = ? AND token = ? AND status = 1 AND token_expiry IS NOT NULL AND token_expiry > NOW()";
+            return $this->select($sql, [$email, $token]);
+        } catch (Exception $e) {
+            // Columna aún no migrada: compat hacia atrás (sin vigencia)
+            $sql = "SELECT id_persona FROM persona WHERE email = ? AND token = ? AND status = 1";
+            return $this->select($sql, [$email, $token]);
+        }
     }
 
     /**
@@ -155,7 +151,16 @@ public function loginUser(string $usuario, string $password)
     public function insertPassword(int $idPersona, string $password)
     {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        
+
+        // Al cambiar la clave se invalida token y vigencia (si la columna existe)
+        try {
+            $ok = $this->update(
+                "UPDATE persona SET password = ?, token = NULL, token_expiry = NULL WHERE id_persona = ?",
+                [$hashedPassword, $idPersona]);
+            if ($ok) { return $ok; }
+        } catch (Exception $e) {
+            // BD sin migrar: sigue abajo
+        }
         $sql = "UPDATE persona SET password = ?, token = ? WHERE id_persona = ?";
         $arrData = [$hashedPassword, "", $idPersona];
         return $this->update($sql, $arrData);
@@ -214,7 +219,8 @@ public function loginUser(string $usuario, string $password)
             $tableExists = $this->select($checkTable);
             
             if (!$tableExists) {
-                // Si no existe la tabla, no bloquear
+                // Sin tabla no hay enforcement posible: permite pero avisa
+                error_log("Login: sin tabla login_intentos, rate-limit desactivado");
                 return false;
             }
 
@@ -228,9 +234,9 @@ public function loginUser(string $usuario, string $password)
             
             return isset($result['bloqueado']) && $result['bloqueado'] == 1;
         } catch (Exception $e) {
-            error_log("Error al verificar bloqueo: " . $e->getMessage());
-            // En caso de error, no bloquear (fail-open)
-            return false;
+            // AUTH fail-closed: ante error se bloquea (salvo tabla inexistente, arriba).
+            error_log("Error al verificar bloqueo (fail-closed): " . $e->getMessage());
+            return true;
         }
     }
 

@@ -31,6 +31,12 @@
 	// Ambiente (development/production)
 	define('ENVIRONMENT', 'development');
 
+	// Política de autenticación (fuente única)
+	define('PASSWORD_MIN_LENGTH', 6);      // largo mínimo de clave
+	define('RESET_TOKEN_MINUTES', 60);     // vigencia del token de recuperación
+	define('LOGIN_MAX_ATTEMPTS', 5);       // intentos antes de bloquear
+	define('LOGIN_BLOCK_MINUTES', 15);     // ventana de bloqueo (minutos)
+
 	// Secreto para firmar URLs públicas de verificación de recibos (QR).
 	// Cambiar en producción por una cadena aleatoria larga.
 	const QR_SECRET = "mrista-qr-2026-c4mb14r-cl4v3";

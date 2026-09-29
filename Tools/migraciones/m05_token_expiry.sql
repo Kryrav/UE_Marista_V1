@@ -1,0 +1,6 @@
+-- =====================================================
+-- MIGRACIÓN M05 — Auth: vigencia de token de recuperación
+-- ALTER TABLE `persona` ADD COLUMN `token_expiry` DATETIME NULL DEFAULT NULL;
+-- Aplicada 2026-09-28 con chequeo previo (ver Backups/M05_AUTH-Login/).
+-- El código es tolerante si la columna no existe (fallbacks en LoginModel).
+-- =====================================================

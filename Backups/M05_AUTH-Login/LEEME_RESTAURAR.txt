@@ -1,0 +1,6 @@
+BACKUP M05 AUTH — db_marista
+===========================
+PRE : db_marista_PRE-M05_2026-09-28.sql (773 KB, antes de token_expiry)
+POST: db_marista_POST-M05_2026-09-28.sql (con persona.token_expiry)
+Restaurar: mysql -u root db_marista < <archivo>
+Servidor MySQL 9.1.0 local.

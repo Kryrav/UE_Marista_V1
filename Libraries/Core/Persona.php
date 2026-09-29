@@ -19,7 +19,7 @@ class Persona extends BaseModel {
         'cel' => 'required|min:8',
         'email' => 'required|email|unique',
         'usuario' => 'required|min:4|unique',
-        'password' => 'required|min:6',
+        'password' => 'required|min:'.PASSWORD_MIN_LENGTH,
         'id_rol' => 'required'
     ];
     
