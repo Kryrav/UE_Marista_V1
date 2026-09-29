@@ -258,12 +258,13 @@ function fntRematricular(ci){
                     let bga = document.querySelector('#badgeGestionActiva');
                     if(bga && parseInt(bga.dataset.gestion)) dest = parseInt(bga.dataset.gestion);
                     document.querySelector('#intGestion').value = dest;
-                document.querySelector('#listStateInscripcion').value = 'Inscrito';
-                let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
-                let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
-                let bt0 = document.querySelector('#boxTipoMod'); if(bt0) bt0.style.display = 'none';
-                let be0 = document.querySelector('#boxEntregadoPor'); if(be0) be0.style.display = 'none';
-                setRematUI(true);
+                    document.querySelector('#listStateInscripcion').value = 'Inscrito';
+                    refreshPickers();
+                    let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+                    let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
+                    let bt0 = document.querySelector('#boxTipoMod'); if(bt0) bt0.style.display = 'none';
+                    let be0 = document.querySelector('#boxEntregadoPor'); if(be0) be0.style.display = 'none';
+                    setRematUI(true);
                     fntListParalelos(dest);
                     toggleRectBox();
                     $('#modalFormMatricula').modal('show');
@@ -303,6 +304,7 @@ function fntRematricular(ci){
             document.querySelector('#intGestion').value = dest;
             document.querySelector('#listTipoEstudiante').value = d.tipo_matricula || 'Regular';
             document.querySelector('#listStateInscripcion').value = 'Inscrito';
+            refreshPickers();
             let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
             let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
             setRematUI(true);
@@ -314,6 +316,17 @@ function fntRematricular(ci){
     }
 }
 
+// REV-MAT2: los selects con widget selectpicker no muestran el valor
+// programático hasta refrescarlos (era el dato "no reflejado" al editar).
+function refreshPickers(){
+    try {
+        if(!window.jQuery) return;
+        ['#listStateInscripcion','#listTipoEstudiante','#listParalelos'].forEach(function(sel){
+            let $s = $(sel);
+            if($s.length && $s.data('selectpicker')){ $s.selectpicker('refresh'); }
+        });
+    } catch(e){}
+}
 // REV-MAT: en modo rematricular/primera-vez el endpoint ignora estado y docs;
 // se ocultan para no confundir (el estado será Inscrito).
 function setRematUI(on){
@@ -399,6 +412,7 @@ function fntEditMatricula(element, idMatricula){
                 document.querySelector('#txtFolio').value = d.folio || "";
                 document.querySelector('#listTipoEstudiante').value = d.tipo_matricula;
                 document.querySelector('#listStateInscripcion').value = d.estado_inscripcion;
+                refreshPickers();
                 // ITERACIÓN 1: precarga documental
                 let chk = document.querySelector('#chkDocPendiente');
                 if(chk){ chk.checked = (d.estado_inscripcion === 'Pendiente_Documentos'); }
@@ -539,12 +553,7 @@ function fntListParalelos(gestion, selected){
                 document.querySelector('#intGestion').value = year;
                 // REV-MAT: si bootstrap-select ya vistió el combo, refrescarlo
                 // ('render' no reconstruye la lista y lo dejaba vacío/inseleccionable).
-                try {
-                    if(window.jQuery){
-                        let $s = $('#listParalelos');
-                        if($s.length && $s.data('selectpicker')){ $s.selectpicker('refresh'); }
-                    }
-                } catch(e){}
+                refreshPickers();
             }
         }
     }
