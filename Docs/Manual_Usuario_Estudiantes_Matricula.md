@@ -1,5 +1,5 @@
 # Manual de Usuario — Gestión de Estudiantes y Matrícula
-**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.4 (incluye M04 seguridad)
+**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.5 (flujo óptimo de inscripción)
 **Usuarios:** Secretaría/Administración (uso diario), Dirección (aprueba), Regencia (cursos), Docentes tutores (consulta)
 
 > Este manual es vivo: cada cambio futuro (M02, M03...) agrega una sección al final y actualiza la portada. Último cambio: M01 2026-09-26.
@@ -15,7 +15,7 @@
 
 ## 2. Registrar estudiante nuevo (3 pasos)
 
-`Estudiantes > Nuevo`
+`Estudiantes > Nuevo` (también llega aquí desde `Matrícula > Matricular Estudiante`: la inscripción nueva siempre usa este wizard).
 
 **Paso 1 Personales (foto opcional JPG/PNG máx 2 MB):**
 - Obligatorios siempre: `C.I. *, Nombres *, Apellidos *, Sexo *, Fecha nacimiento *`.
@@ -28,7 +28,8 @@
 
 **Paso 3 Acceso y matrícula:**
 - Aviso: la clave inicial es el C.I.; se cambia en `Usuarios`.
-- `☑ Matricular de una vez` + `Paralelo` + `Tipo Regular/Becado`.
+- `☑ Matricular de una vez` + `Paralelo` + `Tipo Regular/Becado`. Verá un **resumen vivo** (curso, gestión, total en pensiones y avisos: duplicado, cupo, tutores) antes de guardar.
+- Al guardar aparece la **pantalla de éxito** con siguientes pasos: comprobante, pensiones, vincular tutor e inscribir otro.
 - **NUEVO M01 — Documentación pendiente:** tílde `Documentación pendiente` si falta `Cert. nacimiento / RUDE / Solicitud`. Marque lo entregado, deje `Compromiso firmado` tildado y agregue observación si quiere. `Guardar`.
 
 Resultado: `Estudiante registrado... Matriculado en gestión 2026... Documentación pendiente hasta 2026-XX-XX`.
@@ -43,7 +44,8 @@ Resultado: `Estudiante registrado... Matriculado en gestión 2026... Documentaci
 
 ## 4. Matricular desde el módulo Matrícula
 
-`Matrícula > Matricular Estudiante`: `C.I. + Año lectivo + Curso + Tipo + Folio (opcional) + Confirmación [Confirmado/Inscrito/Pendiente de documentos]`.
+Escriba el CI (**con autocompletado**: propone coincidencias por CI/RUDE/nombre) y complete el formulario. Antes de guardar verá **Revise antes de confirmar** (estudiante, curso, total en pensiones y avisos); pulse **Confirmar matrícula** o **Corregir**.
+`C.I. + Año lectivo + Curso + Tipo + Folio (opcional) + Confirmación [Confirmado/Inscrito/Pendiente de documentos]`.
 Si elige Pendiente, complete checklist + `Plazo hasta` (vacío = auto 30 hábiles) + `Compromiso` + observación. Un estudiante = una matrícula por gestión (si repite, avisa `ya matriculado`).
 **Regla:** solo se matricula en la **gestión activa** (ver badge verde). Si necesita otra gestión (registro extemporáneo), solo **Admin/Dirección** con **motivo de rectificación** obligatorio, que queda registrado y visible en la fila.
 
@@ -100,6 +102,7 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
+- v1.5 2026-09-28 Flujo óptimo: autocomplete CI, resumen/revisión pre-confirmación, aviso de tutores, wizard único, éxito accionable, aviso gestión cerrada.
 - v1.4 2026-09-26 M04: protección anti-CSRF (sin cambio visible; si ve `Sesión expirada`, recargue la página).
 - v1.3 2026-09-26 M03: inclusión opcional, reporte de rezago, comprobante de matrícula, auditoría interna.
 - v1.2 2026-09-26 M02: rematriculación en 1 clic, Retirado/Trasladado/Egresado con motivo, corrección transacción huérfana (invisible al usuario). Addenda: matriculación/rematriculación solo en gestión activa salvo rectificación Admin/Dirección con motivo.

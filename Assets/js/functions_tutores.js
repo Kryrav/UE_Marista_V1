@@ -33,6 +33,14 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     }
     fntListEstudiantesTutor();
+    // FLUJO-ÓPTIMO (5): llegada desde éxito de matrícula → preseleccionar estudiante
+    try {
+        let tid = sessionStorage.getItem('tut_id');
+        if(tid){
+            sessionStorage.removeItem('tut_id');
+            setTimeout(function(){ openModalTutor(); seleccionarEstudiante(tid, ''); }, 500);
+        }
+    } catch(e){}
     // Autocomplete de estudiantes (CI/RUDE/nombre) para asignar el vínculo
     let busEst = document.querySelector('#buscarEstudiante');
     let timerBus = null;

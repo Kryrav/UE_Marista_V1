@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // Sección nueva matrícula
     
     if(document.querySelector("#formNewMatricula")){
-       
+
         let formMatricula = document.querySelector("#formNewMatricula");
         formMatricula.onsubmit = function(e) {
             e.preventDefault();
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function(){
             let listParalelos = document.querySelector('#listParalelos').value;
             let listTipoEstudiante = document.querySelector('#listTipoEstudiante').value; // Regular Becado
             let listStateInscripcion= document.querySelector('#listStateInscripcion').value; //Inscrito o Confirmado
-           
+
             // En edición no se exige CI (no se puede cambiar de estudiante)
             if(boolNuevo == "1" && strCi == ''){
                 swal("Atención", "El CI del estudiante es obligatorio para matricular." , "error");
@@ -85,6 +85,12 @@ document.addEventListener('DOMContentLoaded', function(){
                 swal("Atención", "Gestión inválida: "+intGestion , "error");
                 return false;
             }
+            // FLUJO-ÓPTIMO (2): en creación/rematriculación, revisar antes de confirmar
+            if(boolNuevo == "1" && !window._revConfirmed){
+                fntPreviewMatricula();
+                return false;
+            }
+            window._revConfirmed = false;
             divLoading.style.display = "flex";
             let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
             // ITERACIÓN 2: modo rematricular usa endpoint dedicado (sin folio/docs)
@@ -117,34 +123,113 @@ document.addEventListener('DOMContentLoaded', function(){
                         formMatricula.reset();
                         document.querySelector('#newG').value = "1";
                         document.querySelector('#idMatricula').value = "0";
-                        swal("Matrícula", objData.msg ,"success");
+                        // FLUJO-ÓPTIMO (5): éxito accionable en vez de aviso plano
+                        if(typeof fntExitoMatricula === 'function'){
+                            fntExitoMatricula({msg: objData.msg, idMat: objData.idMatricula || 0, idEst: objData.idEstudiante || 0});
+                        }else{
+                            swal("Matrícula", objData.msg ,"success");
+                        }
                     }else{
                         swal("Error", objData.msg , "error");
-                    }                  
+                    }
                 }
                 divLoading.style.display = "none";
             }
-            
+
         }
+    }
+    // Confirmar tras revisar
+    if(document.querySelector('#btnConfirmarMat')){
+        document.querySelector('#btnConfirmarMat').onclick = function(){
+            document.querySelector('#boxRevision').style.display = 'none';
+            window._revConfirmed = true;
+            document.querySelector("#formNewMatricula").requestSubmit();
+        };
+        document.querySelector('#btnCorregirMat').onclick = function(){
+            document.querySelector('#boxRevision').style.display = 'none';
+        };
+    }
+    // Autocomplete CI -> Estudiantes/buscar (FLUJO-ÓPTIMO 1)
+    let ciMat = document.querySelector('#modalFormMatricula #txtCi');
+    if(ciMat){
+        ciMat.addEventListener('input', function(){
+            window._revConfirmed = false;
+            let box = document.querySelector('#boxRevision'); if(box) box.style.display = 'none';
+            let v = this.value.trim();
+            let res = document.querySelector('#resultCiMat');
+            if(document.querySelector('#newG').value != "1" || this.disabled || v.length < 2){ if(res) res.style.display = 'none'; return; }
+            let rq = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+            rq.open("GET", base_url + '/Estudiantes/buscar?q=' + encodeURIComponent(v), true);
+            rq.send();
+            rq.onreadystatechange = function(){
+                if(rq.readyState == 4 && rq.status == 200){
+                    try {
+                        let o = JSON.parse(rq.responseText);
+                        if(o.status && o.data.length > 0){
+                            let h = '';
+                            o.data.slice(0, 8).forEach(function(s){
+                                h += '<button type="button" class="list-group-item list-group-item-action" data-ci="' + s.ci + '">' + s.ci + ' · ' + s.nombre + ' ' + s.apellido + ' <small class="text-muted">' + (s.curso || '') + '</small></button>';
+                            });
+                            res.innerHTML = h; res.style.display = '';
+                            res.querySelectorAll('button').forEach(function(b){
+                                b.onclick = function(){ ciMat.value = b.dataset.ci; res.style.display = 'none'; };
+                            });
+                        }else{ res.style.display = 'none'; }
+                    } catch(e){ res.style.display = 'none'; }
+                }
+            }
+        });
+        document.addEventListener('click', function(e){
+            let res = document.querySelector('#resultCiMat');
+            if(res && !e.target.closest('#resultCiMat') && e.target.id !== 'txtCi'){ res.style.display = 'none'; }
+        });
     }
 }, false);
 
+// FLUJO-ÓPTIMO (2): resumen de confirmación sin escribir
+function fntPreviewMatricula(){
+    let ci = document.querySelector('#txtCi').value.trim();
+    let g = document.querySelector('#intGestion').value.trim();
+    let p = document.querySelector('#listParalelos').value;
+    let t = document.querySelector('#listTipoEstudiante').value;
+    let e = document.querySelector('#listStateInscripcion').value;
+    let box = document.querySelector('#boxRevision');
+    let body = document.querySelector('#revisionBody');
+    body.innerHTML = 'Consultando...'; box.style.display = '';
+    let rq = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    rq.open("GET", base_url + '/Matricula/preview?ci=' + encodeURIComponent(ci) + '&gestion=' + encodeURIComponent(g) + '&paralelo=' + encodeURIComponent(p) + '&tipo=' + encodeURIComponent(t) + '&estado=' + encodeURIComponent(e), true);
+    rq.send();
+    rq.onreadystatechange = function(){
+        if(rq.readyState == 4 && rq.status == 200){
+            try {
+                let o = JSON.parse(rq.responseText);
+                if(!o.status){ body.innerHTML = '<span class="text-danger">' + o.msg + '</span>'; return; }
+                let d = o.data;
+                let nom = d.estudiante ? (d.estudiante.nombre + ' ' + d.estudiante.apellido + ' (' + d.estudiante.ci + ')') : ('CI ' + ci + ' (nuevo: complete el alta en Estudiantes)');
+                let cur = d.paralelo ? (d.paralelo.nivel + ' ' + d.paralelo.grado + ' "' + d.paralelo.sigla + '" · ' + d.paralelo.turno) : '—';
+                let h = '<div><b>Estudiante:</b> ' + nom + '</div>'
+                    + '<div><b>Curso:</b> ' + cur + ' · <b>Gestión:</b> ' + d.gestion + ' · <b>Tipo:</b> ' + d.tipo + ' · <b>Estado:</b> ' + d.estado + '</div>'
+                    + '<div><b>Pensiones:</b> ' + d.cuotas + ' × Bs. ' + d.monto + ' = <b>Bs. ' + d.total + '</b></div>';
+                if(d.warnings.length > 0){
+                    h += '<div class="mt-1">' + d.warnings.map(function(w){ return '<span class="badge badge-warning mr-1">' + w + '</span>'; }).join('') + '</div>';
+                }
+                if(d.duplicado){ h += '<div class="text-danger mt-1">No se podrá guardar: duplicado.</div>'; }
+                body.innerHTML = h;
+            } catch(err){ body.innerHTML = '<span class="text-danger">No se pudo previsualizar.</span>'; }
+        }
+    }
+}
+
+// FLUJO-ÓPTIMO (4): la creación va por el wizard único de Estudiantes
+function fntIrWizard(){
+    try { sessionStorage.setItem('open_wizard', '1'); } catch(e){}
+    window.location.href = base_url + '/Estudiantes';
+}
+
 function openModal()
 {
-    window._rematMode = false;
-    document.querySelector("#formNewMatricula").reset();
-    document.querySelector('#newG').value = "1";
-    document.querySelector('#idMatricula').value = "0";
-    document.querySelector('#txtCi').disabled = false;
-    document.querySelector('#titleModal').innerHTML = "Nueva Matrícula";
-    document.querySelector('#btnText').innerHTML = "Matricular Estudiante";
-    let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
-    let mr0 = document.querySelector('#motivoRectificacion'); if(mr0) mr0.value = "";
-    let year = new Date().getFullYear();
-    document.querySelector('#intGestion').value = year;
-    fntListParalelos(year);
-    toggleRectBox();
-    $('#modalFormMatricula').modal('show');
+    // FLUJO-ÓPTIMO (4): la creación va por el wizard único; este modal queda para editar/rematricular
+    fntIrWizard();
 }
 
 // ITERACIÓN 2 (F-04): rematricular regular precargando la última matrícula.
@@ -159,6 +244,9 @@ function fntRematricular(ci){
             if(!o.status){ swal("Error", o.msg, "error"); return; }
             let d = o.data;
             window._rematMode = true;
+            window._revConfirmed = false;
+            let rv = document.querySelector('#boxRevision'); if(rv) rv.style.display = 'none';
+            let av = document.querySelector('#avisoGestionCerrada'); if(av) av.style.display = 'none';
             document.querySelector("#formNewMatricula").reset();
             document.querySelector('#newG').value = "1";
             document.querySelector('#idMatricula').value = "0";
@@ -210,6 +298,8 @@ function fntViewMatricula(idMatricula){    let request = (window.XMLHttpRequest)
 
 function fntEditMatricula(element, idMatricula){
     window._rematMode = false;
+    window._revConfirmed = false;
+    let rv = document.querySelector('#boxRevision'); if(rv) rv.style.display = 'none';
     document.querySelector('#titleModal').innerHTML = "Actualizar Matrícula";
     document.querySelector('#btnText').innerHTML = "Actualizar";
     let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
@@ -248,6 +338,16 @@ function fntEditMatricula(element, idMatricula){
                 let mo = document.querySelector('#motivoEstado'); if(mo) mo.value = d.motivo_estado || "";
                 toggleMotivoBox();
                 toggleRectBox();
+                // FLUJO-ÓPTIMO (6): aviso al tocar gestión cerrada
+                let av2 = document.querySelector('#avisoGestionCerrada');
+                let at2 = document.querySelector('#avisoGestionCerradaTxt');
+                if(av2){
+                    let ga = (typeof gestionActiva === 'function') ? gestionActiva() : 0;
+                    if(ga > 0 && parseInt(d.gestion) !== ga){
+                        if(at2) at2.textContent = 'Registro de gestión ' + d.gestion + ' (activa: ' + ga + ').';
+                        av2.style.display = '';
+                    }else{ av2.style.display = 'none'; }
+                }
                 fntListParalelos(d.gestion, d.id_paralelo);
                 $('#modalFormMatricula').modal('show');
             }else{

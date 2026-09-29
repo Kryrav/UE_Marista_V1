@@ -221,6 +221,7 @@
                         </select>
                     </div>
                   </div>
+                  <div class="alert alert-info py-2" id="resumenMatAlta" style="display:none;"></div>
                 </div>
               </div>
 

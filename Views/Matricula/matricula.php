@@ -1,14 +1,15 @@
 <?php 
     headerAdmin($data); 
     getModal('modalMatricula',$data);
+    getModal('modalExitoMatricula',$data);
 ?>
   <main class="app-content">    
       <div class="app-title">
         <div>
             <h1><i class="fas fa-user-tag"></i> <?= $data['page_title'] ?>
                 <?php if($_SESSION['permisosMod']['w']){ ?>
-                <button class="btn btn-primary" type="button" onclick="openModal();" ><i class="fas fa-plus-circle"></i> Matricular Estudiante</button>
-                <?php } ?>
+                <button class="btn btn-primary" type="button" onclick="fntIrWizard();" title="Inscribir por el wizard único de Estudiantes"><i class="fas fa-plus-circle"></i> Matricular Estudiante</button>
+              <?php } ?>
                 <?php if(!empty($data['gestion_activa'])){ ?>
                 <span class="badge badge-success ml-2" id="badgeGestionActiva" data-gestion="<?= (int)$data['gestion_activa'] ?>"><i class="fa fa-calendar"></i> Gestión activa: <?= (int)$data['gestion_activa'] ?></span>
                 <?php } ?>

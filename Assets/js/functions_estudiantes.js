@@ -5,6 +5,10 @@ let estStep = 1;
 let paralelosCargados = false;
 
 document.addEventListener('DOMContentLoaded', function(){
+    // FLUJO-ÓPTIMO (4): llegada desde Matrícula → abrir wizard directo
+    try {
+        if(sessionStorage.getItem('open_wizard')){ sessionStorage.removeItem('open_wizard'); setTimeout(openModal, 400); }
+    } catch(e){}
     tableEstudiantes = $('#tableEstudiantes').dataTable({
         // Procesado en cliente: el backend devuelve la lista completa y
         // DataTables pagina/filtra/ordena localmente (filtros y buscador funcionan).
@@ -97,6 +101,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
     document.querySelector('#btnNextStep').onclick = function(){ wizardGo(estStep + 1); };
     document.querySelector('#btnPrevStep').onclick = function(){ wizardGo(estStep - 1); };
+    // FLUJO-ÓPTIMO (2): refrescar resumen al cambiar paralelo/tipo/check
+    ['listParaleloMat','listTipoMat','chkMatricular','txtCi'].forEach(function(id){
+        let el = document.querySelector('#' + id);
+        if(el){ el.addEventListener('change', function(){ fntResumenAlta(); }); }
+    });
 
     if(document.querySelector("#formEstudiante")){
         let formEstudiante = document.querySelector("#formEstudiante");
@@ -122,7 +131,12 @@ document.addEventListener('DOMContentLoaded', function(){
                             rowTable = "";
                             $('#modalFormEstudiantes').modal("hide");
                             formEstudiante.reset();
-                            swal("Estudiantes", objData.msg, "success");
+                            // FLUJO-ÓPTIMO (5): éxito accionable si hubo matrícula
+                            if(objData.idMatricula && typeof fntExitoMatricula === 'function'){
+                                fntExitoMatricula({msg: objData.msg, idMat: objData.idMatricula, idEst: nuevoId});
+                            }else{
+                                swal("Estudiantes", objData.msg, "success");
+                            }
                         });
                     }else{
                         swal("Error", objData.msg, "error");
@@ -154,6 +168,35 @@ function wizardGo(n){
     document.querySelector('#btnNextStep').style.display = n < max ? '' : 'none';
     document.querySelector('#btnActionForm').style.display = (n === max || esEdicion()) ? '' : 'none';
     if(n === 3 && document.querySelector('#newStudent').value == "1" && !paralelosCargados){ cargarParalelosMat(); }
+    if(n === 3 && document.querySelector('#newStudent').value == "1"){ fntResumenAlta(); }
+}
+
+// FLUJO-ÓPTIMO (2): resumen vivo de la matrícula inmediata (sin escribir)
+function fntResumenAlta(){
+    let box = document.querySelector('#resumenMatAlta');
+    if(!box) return;
+    if(!document.querySelector('#chkMatricular').checked){ box.style.display = 'none'; return; }
+    let ci = document.querySelector('#txtCi').value.trim();
+    let g = window._gestionMat || new Date().getFullYear();
+    let p = document.querySelector('#listParaleloMat').value || '0';
+    let t = document.querySelector('#listTipoMat').value || 'Regular';
+    if(!ci || p === '0'){ box.style.display = 'none'; return; }
+    let rq = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+    rq.open("GET", base_url + '/Matricula/preview?ci=' + encodeURIComponent(ci) + '&gestion=' + g + '&paralelo=' + p + '&tipo=' + encodeURIComponent(t) + '&estado=Confirmado', true);
+    rq.send();
+    rq.onreadystatechange = function(){
+        if(rq.readyState == 4 && rq.status == 200){
+            try {
+                let o = JSON.parse(rq.responseText);
+                if(!o.status){ box.style.display = 'none'; return; }
+                let d = o.data;
+                let cur = d.paralelo ? (d.paralelo.nivel + ' ' + d.paralelo.grado + ' "' + d.paralelo.sigla + '"') : '—';
+                let h = '<b>Se matriculará en:</b> ' + cur + ' · gestión ' + d.gestion + ' · <b>Bs. ' + d.total + '</b> (' + d.cuotas + ' pensiones)';
+                if(d.warnings.length > 0){ h += '<br>' + d.warnings.map(function(w){ return '<span class="badge badge-warning mr-1">' + w + '</span>'; }).join(''); }
+                box.innerHTML = h; box.style.display = '';
+            } catch(e){ box.style.display = 'none'; }
+        }
+    }
 }
 
 function validarPaso(n){
@@ -189,7 +232,9 @@ function cargarParalelosMat(){
             if(o.status){
                 document.querySelector('#listParaleloMat').innerHTML = o.html;
                 document.querySelector('#gestionMatLabel').innerHTML = '(gestión ' + o.gestion + ')';
+                window._gestionMat = o.gestion;
                 paralelosCargados = true;
+                fntResumenAlta();
             }
         }
     }

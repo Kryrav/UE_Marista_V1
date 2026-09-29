@@ -1,6 +1,7 @@
 <?php 
     headerAdmin($data); 
     getModal('modalEstudiantes',$data); 
+    getModal('modalExitoMatricula',$data);
 ?>
 <link rel="stylesheet" type="text/css" href="<?= media(); ?>/css/estudiantes.css">
 <link rel="stylesheet" type="text/css" href="<?= media(); ?>/css/tutores.css">

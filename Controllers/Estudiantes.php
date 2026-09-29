@@ -148,8 +148,11 @@
 			if($request == "dato_guardado"){
 				// Matricular de una vez (solo en creación)
 				$matriculado = "";
+				$idMatNuevo = 0;
 				if($isNew && !empty($_POST['chkMatricular'])){
-					$matriculado = $this->matricularNuevo($strCi, $_POST);
+					$r = $this->matricularNuevo($strCi, $_POST);
+					$matriculado = $r['msg'];
+					$idMatNuevo = $r['idMat'];
 				}
 				// Recupera id para el frontend (útil para redirigir a tutores)
 				$idNuevo = 0;
@@ -157,7 +160,7 @@
 					$row = $this->model->select("SELECT id_estudiante FROM estudiante e INNER JOIN persona p ON e.id_persona=p.id_persona WHERE p.ci=?", [$strCi]);
 					$idNuevo = intval($row["id_estudiante"] ?? 0);
 				}
-				echo json_encode(array('status'=>true,'msg'=>$okMsg.$matriculado,'id'=>$isNew ? $idNuevo : $idEstudiante), JSON_UNESCAPED_UNICODE);
+				echo json_encode(array('status'=>true,'msg'=>$okMsg.$matriculado,'id'=>$isNew ? $idNuevo : $idEstudiante,'idMatricula'=>$idMatNuevo,'ci'=>$strCi), JSON_UNESCAPED_UNICODE);
 			}elseif(strpos((string)$request, 'exist:') === 0){
 				if($fotoName){ @unlink("Assets/images/uploads/estudiantes/".$fotoName); }
 				echo json_encode(array("status"=>false,"msg"=>substr($request, 6)), JSON_UNESCAPED_UNICODE);
@@ -173,16 +176,17 @@
 
 		// Matricula inmediata tras crear (usa gestión activa + paralelo elegido)
 		// ITERACIÓN 1: soporta Documentación pendiente 30 días hábiles (N-01/F-06).
+		// FLUJO-ÓPTIMO: avisa si queda sin tutores y devuelve id de matrícula para el éxito accionable.
 		private function matricularNuevo(string $ci, array $post)
 		{
-			if(empty($_SESSION['permisosMod']['w'])){ return ' (Sin permiso para matricular.)'; }
+			if(empty($_SESSION['permisosMod']['w'])){ return ['msg' => ' (Sin permiso para matricular.)', 'idMat' => 0]; }
 			require_once("Models/MatriculaModel.php");
 			require_once("Models/GestionModel.php");
 			$gm = new GestionModel();
 			$act = $gm->selectGestionAct();
 			$gestion = intval($act["gestion"] ?? date("Y"));
 			$idParalelo = intval($post['listParaleloMat'] ?? 0);
-			if($idParalelo <= 0){ return ' (Estudiante creado, pero seleccione un paralelo para matricular.)'; }
+			if($idParalelo <= 0){ return ['msg' => ' (Estudiante creado, pero seleccione un paralelo para matricular.)', 'idMat' => 0]; }
 			$mm = new MatriculaModel();
 			// ¿Faltan diferibles? -> sugerir pendiente aunque no marquen el check
 			$faltaDif = (trim($post['txtRUDE'] ?? '') === '' || trim($post['txtEmail'] ?? '') === '' || trim($post['txtCelular'] ?? '') === '');
@@ -192,6 +196,10 @@
 			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', $estado, $uid);
 			if($res == "matricula_guardada"){
 				$extra = "";
+				$idMat = (int)($mm->select(
+					"SELECT m.id_matricula FROM matricula m INNER JOIN estudiante e ON m.id_estudiante=e.id_estudiante
+					 INNER JOIN persona p ON e.id_persona=p.id_persona
+					 WHERE p.ci=? AND m.gestion=? ORDER BY m.id_matricula DESC LIMIT 1", [$ci, $gestion])["id_matricula"] ?? 0);
 				if($docPend){
 					$plazo = function_exists('plazo30Habiles') ? plazo30Habiles() : date('Y-m-d', strtotime('+30 days'));
 					$chk = [
@@ -204,9 +212,16 @@
 					$mm->setDocumentacionByCiGestion($ci, $gestion, $plazo, $chk, $comp, strClean($post['docsObs'] ?? ''), $estado);
 					$extra = " Documentación pendiente hasta $plazo (30 días hábiles).";
 				}
-				return " Matriculado en gestión $gestion (10 pensiones generadas).$extra";
+				// FLUJO-ÓPTIMO (3): apoderado mínimo — avisar, no bloquear (norma)
+				try {
+					$nt = $mm->select(
+						"SELECT COUNT(*) AS c FROM padre pa INNER JOIN estudiante e ON pa.id_estudiante=e.id_estudiante
+						 INNER JOIN persona p ON e.id_persona=p.id_persona WHERE p.ci=? AND pa.status != 0", [$ci]);
+					if(intval($nt['c'] ?? 0) === 0){ $extra .= " ⚠ Sin tutores vinculados: vincúlelos desde Tutores."; }
+				} catch (Exception $x) {}
+				return ['msg' => " Matriculado en gestión $gestion (10 pensiones generadas).$extra", 'idMat' => $idMat];
 			}
-			return " (No se pudo matricular: $res)";
+			return ['msg' => " (No se pudo matricular: $res)", 'idMat' => 0];
 		}
 
 		// Paralelos con cupo para el alta (gestión activa)

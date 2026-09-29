@@ -18,8 +18,9 @@
 
               <div class="form-row">
                 <div class="form-group col-md-5">
-                  <label for="txtCi">C.I.</label>
-                  <input type="text" class="form-control" id="txtCi" name="txtCi" required>
+                  <label for="txtCi">C.I. <small class="text-muted">(escriba para buscar)</small></label>
+                  <input type="text" class="form-control" id="txtCi" name="txtCi" required autocomplete="off">
+                  <div id="resultCiMat" class="list-group" style="display:none;position:absolute;z-index:1050;width:90%;"></div>
                 </div>
               </div>
               <div class="form-row">
@@ -90,6 +91,16 @@
                     <input type="text" class="form-control form-control-sm mt-2" name="docsObs" placeholder="Observación (opcional)">
                   </div>
                 </div>
+              </div>
+              <div class="alert alert-danger py-2" id="avisoGestionCerrada" style="display:none;">
+                <i class="fa fa-exclamation-triangle"></i> <strong>Editando gestión cerrada.</strong>
+                <span id="avisoGestionCerradaTxt"></span> Los cambios quedan auditados: complete el motivo.
+              </div>
+              <div class="alert alert-info py-2" id="boxRevision" style="display:none;">
+                <strong><i class="fa fa-eye"></i> Revise antes de confirmar</strong>
+                <div id="revisionBody" class="mt-1"></div>
+                <button id="btnConfirmarMat" class="btn btn-success btn-sm mt-2" type="button"><i class="fa fa-check"></i> Confirmar matrícula</button>
+                <button id="btnCorregirMat" class="btn btn-secondary btn-sm mt-2" type="button">Corregir</button>
               </div>
              <div class="tile-footer">
                 <button id="btnActionForm" class="btn btn-primary" type="submit"><i class="fa fa-fw fa-lg fa-check-circle"></i><span id="btnText">Matricular Estudiante</span></button>&nbsp;&nbsp;&nbsp;
