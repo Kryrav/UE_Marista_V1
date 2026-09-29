@@ -258,10 +258,12 @@ function fntRematricular(ci){
                     let bga = document.querySelector('#badgeGestionActiva');
                     if(bga && parseInt(bga.dataset.gestion)) dest = parseInt(bga.dataset.gestion);
                     document.querySelector('#intGestion').value = dest;
-                    document.querySelector('#listStateInscripcion').value = 'Inscrito';
-                    let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
-                    let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
-                    setRematUI(true);
+                document.querySelector('#listStateInscripcion').value = 'Inscrito';
+                let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
+                let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
+                let bt0 = document.querySelector('#boxTipoMod'); if(bt0) bt0.style.display = 'none';
+                let be0 = document.querySelector('#boxEntregadoPor'); if(be0) be0.style.display = 'none';
+                setRematUI(true);
                     fntListParalelos(dest);
                     toggleRectBox();
                     $('#modalFormMatricula').modal('show');
@@ -318,6 +320,9 @@ function setRematUI(on){
     let st = document.querySelector('#listStateInscripcion');
     if(st){ st.disabled = !!on; }
     document.querySelectorAll('#modalFormMatricula .alert-warning').forEach(function(a){ a.style.display = on ? 'none' : ''; });
+    // M06: etiqueta y entregado-por solo tienen sentido editando
+    let bt = document.querySelector('#boxTipoMod'); if(bt) bt.style.display = on ? 'none' : '';
+    let be = document.querySelector('#boxEntregadoPor'); if(be) be.style.display = on ? 'none' : '';
     if(!on){ toggleMotivoBox(); toggleRectBox(); }
 }
 
@@ -341,7 +346,24 @@ function fntViewMatricula(idMatricula){
                 if(d.plazo_documentos_hasta){ extra += " | Plazo docs: " + d.plazo_documentos_hasta; }
                 if(d.compromiso_firmado == 1){ extra += " | Compromiso: sí"; }
                 if(d.motivo_estado){ extra += " | Motivo: " + d.motivo_estado; }
-                swal("Matrícula "+d.id_matricula, "Estudiante: "+d.nombre_estudiante+" "+d.apellido_estudiante+" ("+d.ci_estudiante+") | Gestión: "+d.gestion+" | Tipo: "+d.tipo_matricula+" | "+extra, "info");
+                let base = "Estudiante: "+d.nombre_estudiante+" "+d.apellido_estudiante+" ("+d.ci_estudiante+") | Gestión: "+d.gestion+" | Tipo: "+d.tipo_matricula+" | "+extra;
+                // M06: anexar último cambio registrado
+                let rq2 = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+                rq2.open("GET", base_url + '/Matricula/cambiosDe/' + idMatricula, true);
+                rq2.send();
+                rq2.onreadystatechange = function(){
+                    let tail = "";
+                    if(rq2.readyState == 4 && rq2.status == 200){
+                        try {
+                            let oc = JSON.parse(rq2.responseText);
+                            if(oc.status && oc.data.length > 0){
+                                let u = oc.data[0];
+                                tail = " | Último cambio: " + u.tipo + (u.usuario ? " por " + u.usuario : "") + " (" + (u.fecha_reg || '').substring(0, 10) + ")";
+                            }
+                        } catch(e){}
+                    }
+                    if(rq2.readyState == 4){ swal("Matrícula "+d.id_matricula, base + tail, "info"); }
+                };
             }else{
                 swal("Error", objData.msg, "error");
             }
@@ -354,6 +376,10 @@ function fntEditMatricula(element, idMatricula){
     window._revConfirmed = false;
     let rv = document.querySelector('#boxRevision'); if(rv) rv.style.display = 'none';
     setRematUI(false);
+    let bt = document.querySelector('#boxTipoMod'); if(bt) bt.style.display = '';
+    let be = document.querySelector('#boxEntregadoPor'); if(be) be.style.display = '';
+    let tm = document.querySelector('#tipoModificacion'); if(tm) tm.value = "";
+    let ep = document.querySelector('#entregadoPor'); if(ep) ep.value = "";
     document.querySelector('#titleModal').innerHTML = "Actualizar Matrícula";
     document.querySelector('#btnText').innerHTML = "Actualizar";
     let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');

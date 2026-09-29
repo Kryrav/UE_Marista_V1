@@ -67,6 +67,21 @@
                     <input type="text" class="form-control" id="motivoEstado" name="motivoEstado" maxlength="255" placeholder="Ej. Traslado a UE San José, nota N°...">
                     <small class="form-text text-muted">Obligatorio en Retirado/Trasladado/Egresado.</small>
                 </div>
+                <div class="form-group col-md-6" id="boxTipoMod" style="display:none;">
+                    <label for="tipoModificacion">Tipo de modificación</label>
+                    <select class="form-control" id="tipoModificacion" name="tipoModificacion">
+                        <option value="">Automático (detecta el cambio)</option>
+                        <option value="cambio_curso">Cambio de curso/paralelo</option>
+                        <option value="correccion">Corrección de datos</option>
+                        <option value="entrega_docs">Entrega de documentos</option>
+                        <option value="cambio_estado">Cambio de estado</option>
+                        <option value="rectificacion">Rectificación</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-12" id="boxEntregadoPor" style="display:none;">
+                    <label for="entregadoPor">¿Quién entrega los documentos? <small class="text-muted">(opcional, queda registrado)</small></label>
+                    <input type="text" class="form-control" id="entregadoPor" name="entregadoPor" maxlength="120" placeholder="Ej. María Pérez (madre)">
+                </div>
                 <div class="form-group col-md-12" id="boxMotivoRect" style="display:none;">
                     <label for="motivoRectificacion">Motivo de rectificación * <small class="text-muted">(solo Admin/Dirección, fuera de gestión activa)</small></label>
                     <input type="text" class="form-control" id="motivoRectificacion" name="motivoRectificacion" maxlength="255" placeholder="Ej. Registro extemporáneo 2024 autorizado por Dirección">

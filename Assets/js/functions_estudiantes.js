@@ -87,14 +87,26 @@ document.addEventListener('DOMContentLoaded', function(){
         };
     }
 
-    // Preview de foto
+    // Preview de foto + validación inmediata (UX-F: no esperar al envío)
     let inpFoto = document.querySelector('#fotoEstudiante');
     if(inpFoto){
         inpFoto.onchange = function(){
+            let errBox = document.querySelector('#fotoError');
+            if(errBox){ errBox.style.display = 'none'; errBox.textContent = ''; }
             if(this.files && this.files[0]){
+                let f = this.files[0];
+                let bad = '';
+                if(f.size > 2 * 1024 * 1024){ bad = 'La foto supera los 2 MB.'; }
+                else if(!/\.(jpe?g|png|webp)$/i.test(f.name)){ bad = 'La foto debe ser JPG, PNG o WEBP.'; }
+                if(bad){
+                    this.value = '';
+                    document.querySelector('#previewFoto').src = base_url + '/Assets/images/avatar.png';
+                    if(errBox){ errBox.textContent = bad; errBox.style.display = ''; }
+                    return;
+                }
                 let rd = new FileReader();
                 rd.onload = function(e){ document.querySelector('#previewFoto').src = e.target.result; };
-                rd.readAsDataURL(this.files[0]);
+                rd.readAsDataURL(f);
             }
         };
     }
@@ -106,12 +118,27 @@ document.addEventListener('DOMContentLoaded', function(){
         let el = document.querySelector('#' + id);
         if(el){ el.addEventListener('change', function(){ fntResumenAlta(); }); }
     });
+    // UX-E: contador de documentos + motivo de beca
+    ['doc_cert_nac','doc_rude','doc_solicitud','txtRUDE','txtEmail','txtCelular'].forEach(function(id){
+        let el = document.querySelector('#' + id);
+        if(el){ el.addEventListener('change', function(){ fntDocsContador(); }); }
+    });
+    let tipoMat = document.querySelector('#listTipoMat');
+    if(tipoMat){
+        tipoMat.addEventListener('change', function(){
+            let row = document.querySelector('#rowMotivoBeca');
+            if(row) row.style.display = (this.value === 'Becado') ? '' : 'none';
+            fntResumenAlta();
+        });
+    }
+    fntDocsContador();
 
     if(document.querySelector("#formEstudiante")){
         let formEstudiante = document.querySelector("#formEstudiante");
         formEstudiante.onsubmit = function(e) {
             e.preventDefault();
-            if(!validarPaso(1) || !validarPaso(2)){ wizardGo(1); swal("Atención", "Complete los campos obligatorios de los pasos 1 y 2.", "error"); return false; }
+            let bad = validarPaso(1) || validarPaso(2);
+            if(bad){ wizardGo(1); swal("Atención", pasoErrorMsg(bad), "error"); return false; }
             divLoading.style.display = "flex";
             let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
             request.open("POST", base_url + '/Estudiantes/setEstudiante', true);
@@ -159,8 +186,8 @@ function wizardGo(n){
     let max = esEdicion() ? 2 : 3;
     if(n < 1) n = 1;
     if(n > max) n = max;
-    if(n === 2 && !validarPaso(1)){ swal("Atención", "Complete los campos obligatorios del paso 1.", "error"); return false; }
-    if(n === 3 && !validarPaso(2)){ swal("Atención", "Complete los datos del paso 2.", "error"); return false; }
+    if(n === 2){ let bad = validarPaso(1); if(bad){ swal("Atención", pasoErrorMsg(bad), "error"); return false; } }
+    if(n === 3){ let bad = validarPaso(2); if(bad){ swal("Atención", pasoErrorMsg(bad), "error"); return false; } }
     estStep = n;
     document.querySelectorAll('.est-step').forEach(function(s){ s.style.display = (parseInt(s.dataset.step) === n) ? '' : 'none'; });
     document.querySelectorAll('.est-steps li').forEach(function(li){ li.classList.toggle('active', parseInt(li.dataset.step) <= n); });
@@ -169,6 +196,22 @@ function wizardGo(n){
     document.querySelector('#btnActionForm').style.display = (n === max || esEdicion()) ? '' : 'none';
     if(n === 3 && document.querySelector('#newStudent').value == "1" && !paralelosCargados){ cargarParalelosMat(); }
     if(n === 3 && document.querySelector('#newStudent').value == "1"){ fntResumenAlta(); }
+}
+
+// UX-E: "Faltan N de 4" visible (CI siempre cuenta como entregado)
+function fntDocsContador(){
+    let el = document.querySelector('#docsContador');
+    if(!el) return;
+    let n = 1; // CI
+    ['doc_cert_nac','doc_rude','doc_solicitud'].forEach(function(id){
+        let c = document.querySelector('#' + id);
+        if(c && c.checked) n++;
+    });
+    // RUDE escrito cuenta aunque no esté tildado
+    let rude = document.querySelector('#txtRUDE');
+    if(rude && rude.value.trim() !== '' && !document.querySelector('#doc_rude').checked) n++;
+    if(n > 4) n = 4;
+    el.textContent = n + ' de 4' + (n < 4 ? ' → pendiente' : ' → completa');
 }
 
 // FLUJO-ÓPTIMO (2): resumen vivo de la matrícula inmediata (sin escribir)
@@ -199,27 +242,46 @@ function fntResumenAlta(){
     }
 }
 
+function fieldLabel(el){
+    let lab = '';
+    let lb = el.closest ? el.closest('.form-group') : null;
+    if(lb){ let l = lb.querySelector('label'); if(l) lab = l.textContent.trim(); }
+    return lab || el.name || el.id;
+}
+
+// UX-D: devuelve el primer inválido (con foco) en vez de solo true/false
 function validarPaso(n){
-    let ok = true;
+    let first = null;
     document.querySelectorAll('.est-step[data-step="' + n + '"] [required]').forEach(function(el){
+        let bad = false;
         if(el.type === 'email'){
-            if(el.value.trim() === '' || el.value.indexOf('@') < 0){ ok = false; el.classList.add('is-invalid'); }
-            else{ el.classList.remove('is-invalid'); }
-        }else if(el.value.trim() === ''){ ok = false; el.classList.add('is-invalid'); }
+            bad = (el.value.trim() === '' || el.value.indexOf('@') < 0);
+        }else if(el.value.trim() === ''){ bad = true; }
+        if(bad){ el.classList.add('is-invalid'); if(!first) first = el; }
         else{ el.classList.remove('is-invalid'); }
     });
     // ITERACIÓN 1: diferibles opcionales — solo formato si vienen con valor
     if(n === 1){
         let em = document.querySelector('#txtEmail');
-        if(em && em.value.trim() !== '' && em.value.indexOf('@') < 0){ ok = false; em.classList.add('is-invalid'); }
+        if(em && em.value.trim() !== '' && em.value.indexOf('@') < 0){ em.classList.add('is-invalid'); if(!first) first = em; }
         let ce = document.querySelector('#txtCelular');
         if(ce && ce.value.trim() !== ''){
             let d = ce.value.replace(/[^0-9]/g, '');
-            if(d.length < 7 || d.length > 9){ ok = false; ce.classList.add('is-invalid'); }
+            if(d.length < 7 || d.length > 9){ ce.classList.add('is-invalid'); if(!first) first = ce; }
             else{ ce.classList.remove('is-invalid'); }
         }
     }
-    return ok;
+    if(first){
+        try { first.focus({preventScroll: false}); } catch(e){ try{ first.focus(); }catch(x){} }
+        first._stepErr = fieldLabel(first);
+        return first;
+    }
+    return null;
+}
+
+function pasoErrorMsg(first){
+    let lab = (first && first._stepErr) ? first._stepErr : 'verifique los campos marcados';
+    return 'Falta o es inválido: ' + lab + '.';
 }
 
 function cargarParalelosMat(){
@@ -327,6 +389,9 @@ function openModal()
     });
     let cc = document.querySelector('#chkCompromiso'); if(cc) cc.checked = true;
     let ob = document.querySelector('#docsObs'); if(ob) ob.value = "";
+    let rb = document.querySelector('#rowMotivoBeca'); if(rb) rb.style.display = 'none';
+    let fe = document.querySelector('#fotoError'); if(fe){ fe.style.display = 'none'; fe.textContent = ''; }
+    fntDocsContador();
     paralelosCargados = false;
     wizardGo(1);
     $('#modalFormEstudiantes').modal('show');
@@ -382,7 +447,12 @@ function fntViewEstudiante(idEstudiante){
                 if(objData.ficha.matriculas.length === 0){ hm = '<p class="text-muted mb-0">Sin matrículas.</p>'; }
                 objData.ficha.matriculas.forEach(function(m){
                     let mot = m.motivo_estado ? ' · <small class="text-muted">Motivo: ' + escHtml(m.motivo_estado) + '</small>' : '';
-                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + mot + '</span> <a class="btn btn-outline-secondary btn-sm ml-2" target="_blank" href="' + base_url + '/Matricula/comprobante/' + m.id_matricula + '" title="Comprobante de matrícula"><i class="fa fa-print"></i></a></div>';
+                    // M06: estado documental de la matrícula
+                    let docs = '';
+                    if(m.estado_inscripcion === 'Pendiente_Documentos'){
+                        docs = ' · <span class="badge badge-warning">Docs pendientes' + (m.plazo_documentos_hasta ? ' hasta ' + escHtml(m.plazo_documentos_hasta) : '') + '</span>';
+                    }
+                    hm += '<div class="ficha-mat"><i class="fa fa-id-card-o"></i><span><b>' + m.gestion + '</b> · ' + (m.curso || 'Sin curso') + ' · ' + m.tipo + ' · ' + m.estado_inscripcion + mot + docs + '</span> <a class="btn btn-outline-secondary btn-sm ml-2" target="_blank" href="' + base_url + '/Matricula/comprobante/' + m.id_matricula + '" title="Comprobante de matrícula"><i class="fa fa-print"></i></a></div>';
                 });
                 document.querySelector("#fichaMatriculas").innerHTML = hm
                     + '<button class="btn btn-success btn-sm mt-2" onclick="fntRematricularDesdeFicha()"><i class="fa fa-forward"></i> Rematricular</button>';

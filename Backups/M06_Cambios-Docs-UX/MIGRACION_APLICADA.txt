@@ -1,0 +1,8 @@
+MIGRACIÓN M06 APLICADA — db_marista
+================================
+Fecha: 2026-09-28, MySQL 9.1.0.
+- CREATE TABLE matricula_cambios (id, id_matricula FK, tipo, detalle JSON, id_usuario, fecha_reg) ... OK
+- Sin cambios en SPs. Código tolerante si la tabla falta (best-effort).
+Verificación: TEST M06 OK (etiqueta auto, entrega con quién, historial en
+comprobante/ficha, left=0).
+Backups: PRE (776 KB) + POST (777 KB) en esta carpeta.

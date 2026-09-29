@@ -183,14 +183,17 @@
 					}
 					if ($_SESSION['permisosMod']['u']) {
 						$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
-						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado,$uid,$motivoRect);
+						// M06: etiqueta del cambio + quién entrega documentos
+						$tipoMod = strClean($_POST['tipoModificacion'] ?? '');
+						$entregadoPor = strClean($_POST['entregadoPor'] ?? '');
+						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado,$uid,$motivoRect,$tipoMod,$entregadoPor);
 						if($request_user == "matricula_actualizada"){
 							// Si pasa a Confirmado y no es pendiente, se libera el plazo
 							if($strStatus === 'Pendiente_Documentos'){
-								$this->model->setDocumentacion($intIdMatricula,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
+								$this->model->setDocumentacion($intIdMatricula,$plazo,$chkDocs,$comp,$obsDocs,$strStatus,$uid,$entregadoPor);
 							}else{
 								// Mantiene checklist pero libera plazo si ya completó
-								$this->model->setDocumentacion($intIdMatricula, null, $chkDocs, $comp, $obsDocs, $strStatus);
+								$this->model->setDocumentacion($intIdMatricula, null, $chkDocs, $comp, $obsDocs, $strStatus,$uid,$entregadoPor);
 							}
 						}
 					}else {
@@ -221,6 +224,14 @@
 				echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);
 				die();
 			}
+		}
+		// M06: historial de cambios de una matrícula (quién/qué/cuándo).
+		public function cambiosDe(int $idMatricula)
+		{
+			if ($_SESSION['permisosMod']['r'] && $idMatricula > 0) {
+				echo json_encode(array('status'=>true,'data'=>$this->model->cambiosDe($idMatricula) ?: []),JSON_UNESCAPED_UNICODE);
+			}
+			die();
 		}
 
 		// OBTENER UNA MATRÍCULA

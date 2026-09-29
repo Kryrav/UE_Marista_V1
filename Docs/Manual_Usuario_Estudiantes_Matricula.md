@@ -1,5 +1,5 @@
 # Manual de Usuario — Gestión de Estudiantes y Matrícula
-**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.5 (flujo óptimo de inscripción)
+**Colegio Marista SS.CC. — Roboré, Bolivia** · Versión 1.6 (UX alta + trazabilidad)
 **Usuarios:** Secretaría/Administración (uso diario), Dirección (aprueba), Regencia (cursos), Docentes tutores (consulta)
 
 > Este manual es vivo: cada cambio futuro (M02, M03...) agrega una sección al final y actualiza la portada. Último cambio: M01 2026-09-26.
@@ -28,7 +28,8 @@
 
 **Paso 3 Acceso y matrícula:**
 - Aviso: la clave inicial es el C.I.; se cambia en `Usuarios`.
-- `☑ Matricular de una vez` + `Paralelo` + `Tipo Regular/Becado`. Verá un **resumen vivo** (curso, gestión, total en pensiones y avisos: duplicado, cupo, tutores) antes de guardar.
+- `☑ Matricular de una vez` + `Paralelo *` + `Tipo`. Si es **Becado**, indique el motivo/resolución (obligatorio, queda registrado). Verá un **resumen vivo** (curso, gestión, total en pensiones y avisos: duplicado, cupo, tutores) antes de guardar.
+- **Documentos:** tílde los entregados; el contador muestra `N de 4`. Si falta alguno queda pendiente con plazo; anote observaciones.
 - Si **no** tilda matricular, el estudiante queda registrado sin matrícula: después use el botón verde `⏩` de su fila en `Estudiantes` (o `Rematricular` en Matrícula con su CI) para matricularlo por primera vez.
 - Al guardar aparece la **pantalla de éxito** con siguientes pasos: comprobante, pensiones, vincular tutor e inscribir otro. Sin matrícula también ofrece vincular tutor.
 - **NUEVO M01 — Documentación pendiente:** tílde `Documentación pendiente` si falta `Cert. nacimiento / RUDE / Solicitud`. Marque lo entregado, deje `Compromiso firmado` tildado y agregue observación si quiere. `Guardar`.
@@ -57,6 +58,10 @@ Sin reescribir datos: use el botón verde `⏩` en la fila de la matrícula ante
 2. Elija el **nuevo paralelo** y pulse `Rematricular`.
 3. Se crean las 10 pensiones de la nueva gestión. La matrícula anterior queda intacta como historial.
 Si el estudiante ya está en esa gestión, avisa y no duplica.
+
+## 4C. Editar una matrícula: etiquetar el cambio (NUEVO M06)
+
+Al editar indique el **Tipo de modificación** (se sugiere automático: cambio de curso, cambio de estado, corrección) y, si recibe papeles, **quién los entrega**. Todo queda en el **historial de cambios** (visible en Ver y en el comprobante impreso) con usuario y fecha. Tipos: cambio de curso, corrección, entrega de documentos, cambio de estado, rectificación.
 
 ## 4C. Retirado / Trasladado / Egresado (NUEVO M02)
 
@@ -104,6 +109,7 @@ Para dar de baja al estudiante después, rige lo mismo: con matrículas en histo
 
 ## Historial del manual (actualizar aquí cada cambio futuro)
 
+- v1.6 2026-09-28 UX alta (pasos por papeles, legajo colapsable, beca con motivo, validación con foco, contador docs) + trazabilidad M06 (etiqueta de cambio, entrega con quién, historial en comprobante).
 - v1.5 2026-09-28 Flujo óptimo: autocomplete CI, resumen/revisión pre-confirmación, aviso de tutores, wizard único, éxito accionable, aviso gestión cerrada.
 - v1.4 2026-09-26 M04: protección anti-CSRF (sin cambio visible; si ve `Sesión expirada`, recargue la página).
 - v1.3 2026-09-26 M03: inclusión opcional, reporte de rezago, comprobante de matrícula, auditoría interna.

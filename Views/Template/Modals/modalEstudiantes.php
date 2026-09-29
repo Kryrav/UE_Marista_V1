@@ -23,19 +23,11 @@
               <div class="est-step" data-step="1">
                 <div class="text-center mb-3">
                   <img id="previewFoto" src="<?= media(); ?>/images/avatar.png" class="est-preview" alt="foto">
-                  <div><label for="fotoEstudiante" class="btn btn-outline-secondary btn-sm mt-2 mb-0"><i class="fa fa-camera"></i> Foto (JPG/PNG, máx 2 MB)</label></div>
+                  <div><label for="fotoEstudiante" class="btn btn-outline-secondary btn-sm mt-2 mb-0"><i class="fa fa-camera"></i> Foto del estudiante (JPG/PNG, máx 2 MB)</label></div>
                   <input type="file" id="fotoEstudiante" name="fotoEstudiante" accept="image/jpeg,image/png,image/webp" style="display:none;">
+                  <div><small id="fotoError" class="text-danger" style="display:none;"></small></div>
                 </div>
-                <div class="form-row">
-                  <div class="form-group col-md-6">
-                    <label for="txtCi">C.I. *</label>
-                    <input type="text" class="form-control" id="txtCi" name="txtCi" required="">
-                  </div>
-                  <div class="form-group col-md-6">
-                    <label for="txtRUDE">RUDE <small class="text-muted">(diferible 30 días hábiles)</small></label>
-                    <input type="text" class="form-control" id="txtRUDE" name="txtRUDE" placeholder="Se puede completar después">
-                  </div>
-                </div>
+                <p class="text-primary mb-1">Identidad (del certificado de nacimiento)</p>
                 <div class="form-row">
                   <div class="form-group col-md-6">
                     <label for="txtNombre">Nombres *</label>
@@ -48,27 +40,38 @@
                 </div>
                 <div class="form-row">
                   <div class="form-group col-md-4">
-                      <label for="listSexEst">Sexo *</label>
-                      <select class="form-control" id="listSexEst" name="listSexEst" required >
-                          <option value="M">Masculino</option>
-                          <option value="F">Femenino</option>
-                      </select>
+                    <label for="txtCi">C.I. *</label>
+                    <input type="text" class="form-control" id="txtCi" name="txtCi" required="">
                   </div>
                   <div class="form-group col-md-4">
                     <label for="dateFNacimiento">Fecha de nacimiento *</label>
                     <input type="date" class="form-control" id="dateFNacimiento" name="dateFNacimiento" required="">
                   </div>
                   <div class="form-group col-md-4">
-                    <label for="txtCelular">Nº Celular <small class="text-muted">(diferible)</small></label>
-                    <input type="text" class="form-control" id="txtCelular" name="txtCelular" placeholder="7-9 dígitos, si se conoce">
+                      <label for="listSexEst">Sexo *</label>
+                      <select class="form-control" id="listSexEst" name="listSexEst" required >
+                          <option value="M">Masculino</option>
+                          <option value="F">Femenino</option>
+                      </select>
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group col-md-6">
+                    <label for="txtRUDE">RUDE <small class="text-muted">(diferible 30 días hábiles)</small></label>
+                    <input type="text" class="form-control" id="txtRUDE" name="txtRUDE" placeholder="Se puede completar después">
+                  </div>
+                </div>
+                <p class="text-primary mb-1">Contacto</p>
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label for="txtCelular">Nº Celular <small class="text-muted">(diferible)</small></label>
+                    <input type="text" class="form-control" id="txtCelular" name="txtCelular" placeholder="7-9 dígitos, si se conoce">
+                  </div>
+                  <div class="form-group col-md-4">
                     <label for="txtEmail">Email <small class="text-muted">(diferible)</small></label>
                     <input type="email" class="form-control" id="txtEmail" name="txtEmail" placeholder="Se puede completar después">
                   </div>
-                  <div class="form-group col-md-6">
+                  <div class="form-group col-md-4">
                       <label for="txtDireccion">Domicilio</label>
                       <input type="text" class="form-control" id="txtDireccion" name="txtDireccion">
                   </div>
@@ -79,11 +82,11 @@
               <div class="est-step" data-step="2" style="display:none;">
                 <div class="form-row">
                   <div class="form-group col-md-6">
-                    <label for="listEst">Estudiante</label>
+                    <label for="listEst">Condición de ingreso</label>
                     <select class="form-control" id="listEst" name="listEst" required >
-                        <option value="Nuevo">Nuevo</option>
-                        <option value="Antiguo">Antiguo</option>
-                        <option value="Retirado">Retirado</option>
+                        <option value="Nuevo">Nuevo (primera vez en el colegio)</option>
+                        <option value="Antiguo">Antiguo (viene de otro colegio)</option>
+                        <option value="Retirado">Reingreso (estuvo retirado)</option>
                     </select>
                   </div>
                   <div class="form-group col-md-6">
@@ -153,7 +156,10 @@
                   </div>
                 </div>
                 <p class="text-primary">Archivo físico / legajo</p>
-                <div class="form-row">
+                <p class="text-muted"><small>Se completa al archivar la carpeta (opcional en el alta).</small></p>
+                <details>
+                  <summary class="btn btn-outline-secondary btn-sm mb-2">Registrar ubicación del legajo</summary>
+                  <div class="form-row mt-2">
                   <div class="form-group col-md-4">
                     <label for="txtFolio">Folio N° (único)</label>
                     <input type="number" class="form-control" id="txtFolio" name="txtFolio" min="1" placeholder="Auto si vacío">
@@ -176,41 +182,20 @@
                         <option value="observado">Observado</option>
                     </select>
                   </div>
-                </div>
+                  </div>
+                </details>
               </div>
 
               <!-- PASO 3 -->
               <div class="est-step" data-step="3" style="display:none;">
-                <div class="alert alert-info py-2">
-                  <i class="fa fa-lock"></i> La contraseña se gestiona únicamente en el módulo <strong>Usuarios</strong>. Al crear, el acceso inicial es el C.I. del estudiante.
-                </div>
                 <div id="boxMatricular">
-                  <hr>
                   <div class="form-check mb-2">
                     <input type="checkbox" class="form-check-input" id="chkMatricular" name="chkMatricular" value="1" checked>
                     <label class="form-check-label" for="chkMatricular"><strong>Matricular de una vez</strong> <span class="text-muted" id="gestionMatLabel"></span></label>
                   </div>
-                  <div class="alert alert-warning py-2">
-                    <div class="form-check">
-                      <input type="checkbox" class="form-check-input" id="chkDocPendiente" name="chkDocPendiente" value="1">
-                      <label class="form-check-label" for="chkDocPendiente"><strong>Documentación pendiente</strong> — se otorga plazo de 30 días hábiles (inscripción sin bloqueo, norma Bolivia).</label>
-                    </div>
-                    <div class="form-row mt-2">
-                      <div class="form-group col-md-4 mb-1">
-                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_cert_nac" name="doc_cert_nac" value="1"><label class="form-check-label" for="doc_cert_nac">Cert. nacimiento</label></div>
-                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_rude" name="doc_rude" value="1"><label class="form-check-label" for="doc_rude">RUDE</label></div>
-                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_solicitud" name="doc_solicitud" value="1"><label class="form-check-label" for="doc_solicitud">Solicitud</label></div>
-                      </div>
-                      <div class="form-group col-md-8 mb-1">
-                        <div class="form-check"><input type="checkbox" class="form-check-input" id="chkCompromiso" name="chkCompromiso" value="1" checked><label class="form-check-label" for="chkCompromiso">Compromiso firmado por apoderado</label></div>
-                        <input type="text" class="form-control form-control-sm mt-1" id="docsObs" name="docsObs" placeholder="Observación documental (opcional)">
-                        <small class="form-text text-muted">Si RUDE/email/celular están vacíos, se marca pendiente automáticamente.</small>
-                      </div>
-                    </div>
-                  </div>
                   <div class="form-row">
                     <div class="form-group col-md-6">
-                        <label for="listParaleloMat">Paralelo</label>
+                        <label for="listParaleloMat">Paralelo *</label>
                         <select class="form-control" id="listParaleloMat" name="listParaleloMat"></select>
                     </div>
                     <div class="form-group col-md-6">
@@ -221,7 +206,34 @@
                         </select>
                     </div>
                   </div>
+                  <div class="form-row" id="rowMotivoBeca" style="display:none;">
+                    <div class="form-group col-md-12 mb-1">
+                      <label for="txtMotivoBeca">Motivo / resolución de beca *</label>
+                      <input type="text" class="form-control" id="txtMotivoBeca" name="txtMotivoBeca" maxlength="255" placeholder="Ej. Resolución N° 05/2026, mejor promedio">
+                    </div>
+                  </div>
                   <div class="alert alert-info py-2" id="resumenMatAlta" style="display:none;"></div>
+                  <div class="alert alert-warning py-2">
+                    <div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="chkDocPendiente" name="chkDocPendiente" value="1">
+                      <label class="form-check-label" for="chkDocPendiente"><strong>Documentación pendiente</strong> — se otorga plazo de 30 días hábiles (inscripción sin bloqueo, norma Bolivia).</label>
+                    </div>
+                    <div class="form-row mt-2">
+                      <div class="form-group col-md-4 mb-1">
+                        <div><small><strong>Entregados:</strong> <span id="docsContador">0 de 4</span></small></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input doc-chk" id="doc_ci" name="doc_ci" value="1" checked disabled><label class="form-check-label" for="doc_ci">C.I.</label></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input doc-chk" id="doc_cert_nac" name="doc_cert_nac" value="1"><label class="form-check-label" for="doc_cert_nac">Cert. nacimiento</label></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_rude" name="doc_rude" value="1"><label class="form-check-label" for="doc_rude">RUDE</label></div>
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="doc_solicitud" name="doc_solicitud" value="1"><label class="form-check-label" for="doc_solicitud">Solicitud</label></div>
+                      </div>
+                      <div class="form-group col-md-8 mb-1">
+                        <div class="form-check"><input type="checkbox" class="form-check-input" id="chkCompromiso" name="chkCompromiso" value="1" checked><label class="form-check-label" for="chkCompromiso">Compromiso firmado por apoderado</label></div>
+                        <input type="text" class="form-control form-control-sm mt-1" id="docsObs" name="docsObs" placeholder="Observación documental (opcional)">
+                        <small class="form-text text-muted">Si RUDE/email/celular están vacíos, se marca pendiente automáticamente.</small>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-muted"><small><i class="fa fa-lock"></i> El acceso inicial es el C.I.; la contraseña se cambia en Usuarios.</small></p>
                 </div>
               </div>
 

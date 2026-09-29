@@ -87,6 +87,10 @@
 			if($err = $this->validar($_POST, $isNew)){
 				echo json_encode(array("status"=>false,"msg"=>$err), JSON_UNESCAPED_UNICODE); die();
 			}
+			// UX-E: beca exige motivo si se matricula de una vez
+			if($isNew && !empty($_POST['chkMatricular']) && strClean($_POST['listTipoMat'] ?? '') === 'Becado' && trim($_POST['txtMotivoBeca'] ?? '') === ''){
+				echo json_encode(array("status"=>false,"msg"=>'Indique el motivo/resolución de la beca.'), JSON_UNESCAPED_UNICODE); die();
+			}
 			$idEstudiante = intval($_POST['idEstudiante'] ?? 0);
 			$strCi = strClean($_POST['txtCi'] ?? '');
 			$strRUDE = strClean($_POST['txtRUDE'] ?? '');
@@ -194,7 +198,10 @@
 				'rude' => (trim($post['txtRUDE'] ?? '') !== '' ? 1 : (!empty($post['doc_rude']) ? 1 : 0)),
 				'solicitud' => !empty($post['doc_solicitud']),
 			], !empty($post['chkCompromiso']), strClean($post['docsObs'] ?? ''));
-			$r = $svc->inscribir($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), $plan['estado'], $uid, $plan);
+			$r = $svc->inscribir($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), $plan['estado'], $uid, $plan,
+				null,
+				(strClean($post['listTipoMat'] ?? '') === 'Becado' && trim($post['txtMotivoBeca'] ?? '') !== '')
+					? 'Beca: '.strClean($post['txtMotivoBeca']) : null);
 			if(!$r->ok){
 				$code = ($r->code === 'exist') ? 'matricula_existente' : $r->msg;
 				return ['msg' => " (No se pudo matricular: $code)", 'idMat' => 0];

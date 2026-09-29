@@ -62,6 +62,38 @@ $col = $data['hist']['colegio'] ?: [];
     <tr><th>Cuotas generadas</th><td><?= $tot['cuotas'] ?> (febrero a noviembre)</td><th>Total gestión</th><td>Bs. <?= number_format($tot['cobrado'] + $tot['deuda'], 2) ?></td></tr>
   </table>
 
+  <?php $cambios = $data['hist']['cambios'] ?? []; if(!empty($cambios)): ?>
+  <h3 class="doc" style="font-size:13px;">HISTORIAL DE CAMBIOS</h3>
+  <table>
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th>Usuario</th></tr></thead>
+    <tbody>
+    <?php foreach($cambios as $c):
+      $det = json_decode($c['detalle'] ?? '', true);
+      $txt = '';
+      if(is_array($det)){
+        if(!empty($det['cambios']) && is_array($det['cambios'])){
+          $p = [];
+          foreach($det['cambios'] as $k => $v){ $p[] = $k.': '.htmlspecialchars((string)($v['antes'] ?? '').' → '.($v['despues'] ?? '')); }
+          $txt .= implode(' · ', $p);
+        }
+        if(!empty($det['motivo'])){ $txt .= ($txt !== '' ? ' · ' : '').'Motivo: '.htmlspecialchars($det['motivo']); }
+        if(!empty($det['entregado_por'])){ $txt .= ($txt !== '' ? ' · ' : '').'Entregó: '.htmlspecialchars($det['entregado_por']); }
+        if(!empty($det['checklist']) && is_array($det['checklist'])){
+          $docs = ['ci' => 'CI', 'cert_nac' => 'Cert.nac.', 'rude' => 'RUDE', 'solicitud' => 'Solicitud'];
+          $e = [];
+          foreach($docs as $k => $l){ $e[] = $l.': '.(!empty($det['checklist'][$k]) ? 'sí' : 'no'); }
+          $txt .= ($txt !== '' ? ' · ' : '').'Docs ['.implode(', ', $e).']';
+          if(!empty($det['plazo'])){ $txt .= ' plazo '.htmlspecialchars($det['plazo']); }
+        }
+        if(!empty($det['gestion'])){ $txt .= 'Gestión '.htmlspecialchars($det['gestion']); }
+      }
+    ?>
+      <tr><td><?= htmlspecialchars(substr($c['fecha_reg'], 0, 16)) ?></td><td><?= htmlspecialchars($c['tipo']) ?></td><td><?= $txt !== '' ? $txt : '—' ?></td><td><?= htmlspecialchars($c['usuario'] ?? '—') ?></td></tr>
+    <?php endforeach; ?>
+    </tbody>
+  </table>
+  <?php endif; ?>
+
   <div class="firmas">
     <div>Secretaría<br><small>Nombre, firma y sello</small></div>
     <div>Dirección<br><small>Nombre, firma y sello</small></div>

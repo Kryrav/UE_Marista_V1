@@ -1,0 +1,5 @@
+BACKUP PRE-MIGRACIÓN M06 — db_marista
+=====================================
+Fecha: 2026-09-28. MySQL 9.1.0 local.
+Archivo: db_marista_PRE-M06_2026-09-28.sql (--routines --events --triggers)
+RESTAURAR: mysql -u root db_marista < db_marista_PRE-M06_2026-09-28.sql

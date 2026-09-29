@@ -28,9 +28,11 @@
          FROM padre pa INNER JOIN persona t ON pa.id_persona = t.id_persona
          WHERE pa.id_estudiante = ? AND pa.status != 0", [$IdEst]);
       // ITERACIÓN 2: + motivo_estado (M02, tolerante si la columna no existe)
+      // M06: + docs (plazo/checklist) para la tira documental de la ficha
       try {
         $matriculas = $this->select_all(
           "SELECT m.id_matricula, m.gestion, m.tipo, m.estado_inscripcion, m.status, m.motivo_estado,
+                  m.plazo_documentos_hasta, m.docs_checklist,
                   CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso
            FROM matricula m LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
            WHERE m.id_estudiante = ? ORDER BY m.gestion DESC", [$IdEst]);
@@ -325,7 +327,15 @@
         if($r["estado_pago"]==1){ $tot["pagadas"]++; $tot["cobrado"] += (float)$r["monto"]; }
         else{ $tot["pendientes"]++; $tot["deuda"] += (float)$r["monto"]; }
       }
-      return ["cabecera"=>$cab, "pensiones"=>$pens ?: [], "colegio"=>$col, "totales"=>$tot];
+      // M06: historial de cambios con usuario (tolerante si la tabla no existe)
+      $cambios = [];
+      try {
+        $cambios = $this->select_all(
+          "SELECT c.tipo, c.detalle, c.fecha_reg, CONCAT(p.nombre,' ',p.apellido) AS usuario
+           FROM matricula_cambios c LEFT JOIN persona p ON p.id_persona = c.id_usuario
+           WHERE c.id_matricula = ? ORDER BY c.id_cambio DESC", [$idMatricula]) ?: [];
+      } catch (Exception $e) {}
+      return ["cabecera"=>$cab, "pensiones"=>$pens ?: [], "colegio"=>$col, "totales"=>$tot, "cambios"=>$cambios];
     }
 
     // Baja segura: bloquea si tiene matrícula activa; si no, da de baja

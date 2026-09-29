@@ -55,17 +55,26 @@ class InscripcionService
 
     /**
      * Inscribe (SP genera las 10 pensiones) + docs + motivo de rectificación.
+     * $motivoDirecto: motivo libre ya con su prefijo (ej. 'Beca: ...'); si viene,
+     * se antepone a la rectificación.
      * @return ServiceResult ok con ['idMatricula'] / exists / fail
      */
-    public function inscribir(string $ci, int $gestion, int $paralelo, string $tipo, string $estado, ?int $userId, ?array $docsPlan = null, ?string $rectMotivo = null): ServiceResult
+    public function inscribir(string $ci, int $gestion, int $paralelo, string $tipo, string $estado, ?int $userId, ?array $docsPlan = null, ?string $rectMotivo = null, ?string $motivoDirecto = null, string $entregadoPor = ''): ServiceResult
     {
         $res = $this->mat->insertMatricula($ci, $gestion, $paralelo, $tipo, '', $estado, $userId);
         if ($res == 'matricula_guardada') {
             if ($docsPlan !== null) {
-                $this->mat->setDocumentacionByCiGestion($ci, $gestion, $docsPlan['plazo'], $docsPlan['checklist'], $docsPlan['compromiso'], $docsPlan['obs'], $estado);
+                $this->mat->setDocumentacionByCiGestion($ci, $gestion, $docsPlan['plazo'], $docsPlan['checklist'], $docsPlan['compromiso'], $docsPlan['obs'], $estado, $userId, $entregadoPor);
+            }
+            $motivos = [];
+            if ($motivoDirecto !== null && trim($motivoDirecto) !== '') {
+                $motivos[] = trim($motivoDirecto);
             }
             if ($rectMotivo !== null && trim($rectMotivo) !== '') {
-                $this->mat->setMotivoByCiGestion($ci, $gestion, 'Rectificación histórica: ' . trim($rectMotivo));
+                $motivos[] = 'Rectificación histórica: ' . trim($rectMotivo);
+            }
+            if ($motivos) {
+                $this->mat->setMotivoByCiGestion($ci, $gestion, implode(' — ', $motivos));
             }
             $row = $this->mat->select(
                 "SELECT m.id_matricula FROM matricula m INNER JOIN estudiante e ON m.id_estudiante=e.id_estudiante
