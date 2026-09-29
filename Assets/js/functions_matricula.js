@@ -261,9 +261,25 @@ function fntRematricular(ci){
                     document.querySelector('#listStateInscripcion').value = 'Inscrito';
                     let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
                     let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
+                    setRematUI(true);
                     fntListParalelos(dest);
                     toggleRectBox();
                     $('#modalFormMatricula').modal('show');
+                    // REV-MAT: mostrar a QUIÉN se registra (nombre desde el buscador)
+                    let rqN = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+                    rqN.open("GET", base_url + '/Estudiantes/buscar?q=' + encodeURIComponent(ci), true);
+                    rqN.send();
+                    rqN.onreadystatechange = function(){
+                        if(rqN.readyState == 4 && rqN.status == 200){
+                            try {
+                                let on = JSON.parse(rqN.responseText);
+                                if(on.status && on.data.length > 0){
+                                    let s = on.data[0];
+                                    document.querySelector('#titleModal').innerHTML = "Matricular existente: " + s.nombre + " " + s.apellido + " (" + s.ci + ")";
+                                }
+                            } catch(e){}
+                        }
+                    };
                     return;
                 }
                 swal("Error", o.msg, "error"); return;
@@ -287,6 +303,7 @@ function fntRematricular(ci){
             document.querySelector('#listStateInscripcion').value = 'Inscrito';
             let boxM = document.querySelector('#boxMotivoEstado'); if(boxM) boxM.style.display = 'none';
             let mr1 = document.querySelector('#motivoRectificacion'); if(mr1) mr1.value = "";
+            setRematUI(true);
             fntListParalelos(dest);
             toggleRectBox();
             swal("Rematriculación", "Última: gestión " + d.gestion + " · " + (d.curso || 'sin curso') + " · " + d.estado_inscripcion + ". Elija el nuevo paralelo.", "info");
@@ -295,13 +312,23 @@ function fntRematricular(ci){
     }
 }
 
+// REV-MAT: en modo rematricular/primera-vez el endpoint ignora estado y docs;
+// se ocultan para no confundir (el estado será Inscrito).
+function setRematUI(on){
+    let st = document.querySelector('#listStateInscripcion');
+    if(st){ st.disabled = !!on; }
+    document.querySelectorAll('#modalFormMatricula .alert-warning').forEach(function(a){ a.style.display = on ? 'none' : ''; });
+    if(!on){ toggleMotivoBox(); toggleRectBox(); }
+}
+
 // I3 (U-05): comprobante de matrícula imprimible
 function fntComprobante(idMatricula){
     if(!idMatricula){ swal("Error", "Matrícula inválida.", "error"); return; }
     window.open(base_url + '/Matricula/comprobante/' + idMatricula, '_blank');
 }
 
-function fntViewMatricula(idMatricula){    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
+function fntViewMatricula(idMatricula){
+    let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
     let ajaxUrl = base_url+'/Matricula/getMatricula/'+idMatricula;
     request.open("GET",ajaxUrl,true);
     request.send();
@@ -326,6 +353,7 @@ function fntEditMatricula(element, idMatricula){
     window._rematMode = false;
     window._revConfirmed = false;
     let rv = document.querySelector('#boxRevision'); if(rv) rv.style.display = 'none';
+    setRematUI(false);
     document.querySelector('#titleModal').innerHTML = "Actualizar Matrícula";
     document.querySelector('#btnText').innerHTML = "Actualizar";
     let request = (window.XMLHttpRequest) ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHTTP');
@@ -483,9 +511,14 @@ function fntListParalelos(gestion, selected){
                     document.querySelector('#listParalelos').value = selected;
                 }
                 document.querySelector('#intGestion').value = year;
-                if(window.jQuery && $('#listParalelos').selectpicker){
-                    $('#listParalelos').selectpicker('render');
-                }
+                // REV-MAT: si bootstrap-select ya vistió el combo, refrescarlo
+                // ('render' no reconstruye la lista y lo dejaba vacío/inseleccionable).
+                try {
+                    if(window.jQuery){
+                        let $s = $('#listParalelos');
+                        if($s.length && $s.data('selectpicker')){ $s.selectpicker('refresh'); }
+                    }
+                } catch(e){}
             }
         }
     }
