@@ -32,6 +32,17 @@ Contiene la lógica de negocio. Cada archivo es una clase que extiende de `Contr
 - Interactúan con los **Modelos** para obtener datos.
 - Cargan las **Vistas** para mostrar la respuesta al usuario.
 
+### 4b. `Libraries/Services/` (Servicios — casos de uso)
+Convención vigente desde la refactorización SVC:
+- **Controllers**: solo HTTP (leer POST/GET, sesión, permisos, CSRF, responder JSON/vista).
+- **Services**: reglas de negocio multi-entidad y códigos del dominio
+  (`InscripcionService`, `TutorService`, `CursoService`, `CobroService`,
+  `MateriaService`, `GestionService`, `AuthService`, `PasswordResetService`,
+  `FinanzasService`, `ReciboService`, `UserPolicy`, `PasswordPolicy`,
+  `Presenter`, `ServiceResult`). Sin `$_POST` ni `$_SESSION` adentro
+  (reciben parámetros; las políticas reciben la sesión como array).
+- **Models**: solo persistencia (SQL/SPs).
+
 ### 5. `Models/` (Modelos)
 Interactúan con la base de datos.
 - Cada modelo extiende de `Mysql` (o de una clase base similar en `Libraries/Core`).

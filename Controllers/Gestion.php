@@ -73,22 +73,24 @@
 				$strDescripcion=(strClean($_POST['txtDescripcion']));
 				$boolNew=(strClean($_POST['newG']));
 			
-				$arrData="";
-				// Validamos si es insertar nueva gestión o  es actualizar gestión 
-				if ($boolNew) {
-					$status=1;
-					// Si es una apertura de gestion
-					if ($_SESSION['permisosMod']['w']) {
-						$arrData=$this->model->insertNewGestion($intGestion, $dateInicio, $dateFin, $strGest, $intPension, $strDescripcion, $status);
-					}
-				} else {
-					$status=0;
-					// Es la actualización de la gestión 
-					if ($_SESSION['permisosMod']['u']) {
-						$arrData=$this->model->updateGestion($intGestion, $dateInicio, $dateFin, $strGest, $intPension, $strDescripcion);
-
-					}
+			$arrData="";
+			// Validamos si es insertar nueva gestión o  es actualizar gestión 
+			// REV-SVC: apertura/actualización en el servicio (misma semántica)
+			// El servicio devuelve el código crudo para conservar el mapeo de mensajes.
+			$svc = new \Services\GestionService($this->model);
+			if ($boolNew) {
+				// Si es una apertura de gestion
+				if ($_SESSION['permisosMod']['w']) {
+					$r = $svc->guardar(true, $intGestion, $dateInicio, $dateFin, $strGest, $intPension, $strDescripcion);
+					$arrData = $r->ok ? "dato_guardado" : $r->msg;
 				}
+			} else {
+				// Es la actualización de la gestión 
+				if ($_SESSION['permisosMod']['u']) {
+					$r = $svc->guardar(false, $intGestion, $dateInicio, $dateFin, $strGest, $intPension, $strDescripcion);
+					$arrData = $r->ok ? "dato_guardado" : $r->msg;
+				}
+			}
 				
 				if($arrData == "dato_guardado" )
 				{

@@ -69,9 +69,11 @@ class Usuarios extends Controllers {
                 'direccion_dom' => strClean($_POST['txtDireccion']),
                 'cel' => strClean($_POST['txtCel']),
                 'email' => strtolower(strClean($_POST['txtEmail'])),
-                'usuario' => strtolower(strClean(
-                    empty($_POST['txtUserAcces']) ? $_POST['txtEmail'] : $_POST['txtUserAcces']
-                )),
+                // REV-SVC: usuario por defecto en política única
+                'usuario' => \Services\UserPolicy::loginFor(
+                    strClean($_POST['txtUserAcces'] ?? ''),
+                    strtolower(strClean($_POST['txtEmail']))
+                ),
                 'id_rol' => intval(strClean($_POST['listRolid'])),
                 'status' => intval(strClean($_POST['listStatus']))
             ];
@@ -269,35 +271,22 @@ public function delUsuario()
             
             try {
                 $idUsuario = $_SESSION['idUser'];
-                
-                // Obtener datos actuales para merge
-                $usuarioActual = $this->model->selectPersona($idUsuario);
-                
-                $data = [
-                    'ci' => strClean($_POST['txtIdentificacion']),
-                    'nombre' => strClean($_POST['txtNombre']),
-                    'apellido' => strClean($_POST['txtApellido']),
-                    'cel' => strClean($_POST['txtTelefono']),
-                    'sexo' => $usuarioActual['sexo'], // Mantener datos existentes
-                    'direccion_dom' => $usuarioActual['direccion_dom'],
-                    'email' => $usuarioActual['email'],
-                    'usuario' => $usuarioActual['usuario'],
-                    'id_rol' => $usuarioActual['idrol']
-                ];
-                
-                // Si hay nueva contraseña
-                if(!empty($_POST['txtPassword'])) {
-                    $data['password'] = $_POST['txtPassword'];
-                }
-                
-                $result = $this->model->updatePersona($idUsuario, $data);
-                
-                if($result['success']) {
-                    // Actualizar sesión
-                    sessionUser($_SESSION['idUser']);
+
+                // REV-SVC Fase 2: el merge + update + sesión viven en el modelo
+                // (antes duplicado aquí y en updatePerfil con riesgo de divergir).
+                $result = $this->model->updatePerfil(
+                    $idUsuario,
+                    strClean($_POST['txtIdentificacion']),
+                    strClean($_POST['txtNombre']),
+                    strClean($_POST['txtApellido']),
+                    intval(strClean($_POST['txtTelefono'])),
+                    strClean($_POST['txtPassword'] ?? '')
+                );
+
+                if(!empty($result['success'])) {
                     $this->jsonResponse(true, 'Datos actualizados correctamente.');
                 } else {
-                    $this->jsonResponse(false, 'No es posible actualizar los datos.');
+                    $this->jsonResponse(false, $result['message'] ?? 'No es posible actualizar los datos.');
                 }
                 
             } catch (Exception $e) {
@@ -372,20 +361,20 @@ public function delUsuario()
                         $btnView = '<button class="btn btn-info btn-sm btnViewMateria" onClick="fntViewPension(' . $pension['id_pensiones'] . ')" title="Ver Pago"><i class="far fa-eye"></i></button>';
                     }
                     
-                    if($_SESSION['permisosMod']['u'] && $pension['estado_pago'] == 0) {
+                    // REV-SVC: botones por regla única (antes: anular sin chequear estado)
+                    if($_SESSION['permisosMod']['u'] && \Services\FinanzasService::puedePagar($pension)) {
                         $btnEdit = '<button class="btn btn-success btn-sm btnEditMateria" onClick="fntPagarPension(' . $pension['id_pensiones'] . ')" title="Pagar"><i class="fa fa-money"></i></button>';
                     }
                     
-                    if($_SESSION['permisosMod']['d']) {
+                    if($_SESSION['permisosMod']['d'] && \Services\FinanzasService::puedeAnular($pension)) {
                         $btnDelete = '<button class="btn btn-danger btn-sm btnDelMateria" onClick="fntAnularPension(' . $pension['id_pensiones'] . ')" title="Anular"><i class="far fa-trash-alt"></i></button>';
                     }
                     
-                    // Formatear estado
-                    if($pension['estado_pago'] == 1) {
-                        $pension['estado_pago'] = '<span class="badge badge-success m-1 px-3">Pagado</span>';
+                    // Formatear estado (REV-SVC: misma inferencia que Pensiones, incluye Vencido)
+                    $estPen = \Services\FinanzasService::estadoPension($pension);
+                    $pension['estado_pago'] = $estPen['badge'];
+                    if($estPen['clave'] === 'pagado') {
                         $btnImprimir = '<button class="btn btn-secondary border-dark btn-sm" onClick="fntImprimirRecibo(' . $pension['id_pensiones'] . ')" title="Imprimir"><i class="fa fa-print"></i></button>';
-                    } else {
-                        $pension['estado_pago'] = '<span class="badge badge-danger m-1 px-3">Pendiente</span>';
                     }
                     
                     $pension['options'] = '<div class="text-center">' . $btnImprimir . ' ' . $btnView . ' ' . $btnEdit . ' ' . $btnDelete . '</div>';
@@ -440,13 +429,8 @@ public function delUsuario()
      */
     private function formatStatus($status): string
     {
-        if ($status == 1) {
-            return '<span class="badge badge-success">Activo</span>';
-        } elseif ($status == 2) {
-            return '<span class="badge badge-warning">Inactivo</span>';
-        } else {
-            return '<span class="badge badge-danger">Eliminado</span>';
-        }
+        // REV-SVC: presentación única (misma tabla 1/2/0)
+        return \Services\Presenter::estadoEstudiante(intval($status));
     }
 
     /**
@@ -463,12 +447,9 @@ public function delUsuario()
             $btnView = '<button class="btn btn-info btn-sm btnViewUsuario" onClick="fntViewUsuario(' . $usuario['id_persona'] . ')" title="Ver usuario"><i class="far fa-eye"></i></button>';
         }
         
-        // Botón Editar - con lógica de permisos
+        // Botón Editar - con lógica de permisos (REV-SVC: regla única en UserPolicy)
         if($_SESSION['permisosMod']['u']) {
-            $puedeEditar = (
-                ($_SESSION['idUser'] == 1 && $_SESSION['userData']['idrol'] == 1) ||
-                ($_SESSION['userData']['idrol'] == 1 && ($usuario['idrol'] ?? 0) != 1)
-            );
+            $puedeEditar = \Services\UserPolicy::puedeEditar($_SESSION, $usuario);
             
             if($puedeEditar) {
                 $btnEdit = '<button class="btn btn-primary btn-sm btnEditUsuario" onClick="fntEditUsuario(this,' . $usuario['id_persona'] . ')" title="Editar usuario"><i class="fas fa-pencil-alt"></i></button>';
@@ -477,12 +458,9 @@ public function delUsuario()
             }
         }
         
-        // Botón Eliminar - con lógica de permisos
+        // Botón Eliminar - con lógica de permisos (REV-SVC: regla única en UserPolicy)
         if($_SESSION['permisosMod']['d']) {
-            $puedeEliminar = (
-                ($_SESSION['idUser'] == 1 && $_SESSION['userData']['idrol'] == 1) ||
-                ($_SESSION['userData']['idrol'] == 1 && ($usuario['idrol'] ?? 0) != 1)
-            ) && ($_SESSION['userData']['id_persona'] != $usuario['id_persona']);
+            $puedeEliminar = \Services\UserPolicy::puedeEliminar($_SESSION, $usuario);
             
             if($puedeEliminar) {
                 $btnDelete = '<button class="btn btn-danger btn-sm btnDelUsuario" onClick="fntDelUsuario(' . $usuario['id_persona'] . ')" title="Eliminar usuario"><i class="far fa-trash-alt"></i></button>';

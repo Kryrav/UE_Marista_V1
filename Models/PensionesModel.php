@@ -40,6 +40,28 @@
             }
         }
 
+        // REV-SVC Fase 2: el contrato que Usuarios::getPensiones espera
+        // (matricula, gestion_academica, curso, mes_pago, monto_a_pagar...).
+        // Antes llamaba a una clase inexistente (fatal silencioso → siempre vacío).
+        public function getPensionesByCI(string $ci)
+        {
+            $ordenMes = "FIELD(p.mes,'Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre')";
+            return $this->select_all(
+                "SELECT p.id_pensiones, p.estado_pago, p.monto AS monto_a_pagar, p.mes AS mes_pago,
+                        p.fecha_vencimiento, (p.estado_pago = 0 AND p.fecha_vencimiento < CURDATE()) AS vencida,
+                        m.id_matricula AS matricula, m.gestion AS gestion_academica,
+                        CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso,
+                        per.ci AS ci_estudiante, CONCAT(per.nombre,' ',per.apellido) AS nombre_completo
+                 FROM pensiones p
+                 INNER JOIN matricula m ON p.id_matricula = m.id_matricula
+                 INNER JOIN estudiante e ON m.id_estudiante = e.id_estudiante
+                 INNER JOIN persona per ON e.id_persona = per.id_persona
+                 LEFT JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo
+                 WHERE per.ci = ? AND p.status = 1
+                 ORDER BY m.gestion DESC, $ordenMes",
+                [$ci]);
+        }
+
         public function setPago(int $txtMonto, string $listTipoPago, string $txtCodigo, string $txtNameAportante, string $txtLastAportante, string $txtCiAportante, string $txtParentesco, int $intIdPension, int $idUsuario = 0)
         {
             // Validación de monto exacto: no se altera la deuda (sin parciales)

@@ -4,3 +4,6 @@
 # Backups con datos reales: solo local, jamás al repo (protección de datos de menores)
 Backups/*.sql
 Backups/**/*.sql
+# Logs vacíos de respaldo: solo local
+Backups/*.log
+Backups/**/*.log

@@ -32,45 +32,39 @@
                     echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
                 }
                     // Almacenamos los datos en variables 
-                    $strArea=       ucwords(strClean($_POST['txtArea']));
-                    $strNombre=     ucwords(strClean($_POST['txtCampo']));
-                    $strDescripcion=strClean($_POST['txtDescripcion']);
-                    $intGrado=      intval(strClean($_POST['listGrado']));
-                    $strNivel=      strClean($_POST['listNivel']);
-                    $intHoras=      intval(strClean($_POST['horas']));
-                    $status=        intval(strClean($_POST['Status']));
+                    // REV-SVC: normalización + guardado en el servicio (mismos mensajes)
+                    $n = \Services\MateriaService::normalizar([
+                        'area' => ucwords(strClean($_POST['txtArea'])),
+                        'nombre' => ucwords(strClean($_POST['txtCampo'])),
+                        'descripcion' => strClean($_POST['txtDescripcion']),
+                        'grado' => intval(strClean($_POST['listGrado'])),
+                        'nivel' => strClean($_POST['listNivel']),
+                        'horas' => intval(strClean($_POST['horas'])),
+                        'status' => intval(strClean($_POST['Status'])),
+                    ]);
 
                     $intIdMateria=        intval($_POST['idMateria'] ?? 0); //Sirve para validar si nos envían un ID para saber si es insert o update
                     // Ejecutamos el metodo del modelo 
-                    $request_user="";
                     if ($intIdMateria > 0) {
                         if (!$_SESSION['permisosMod']['u']) {
                             $arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
                             echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
                         }
-                        $request_user=$this->model->updateMateria($intIdMateria,$strArea, $strNombre, $strDescripcion, $intGrado, $strNivel, $intHoras, $status);
                     }else {
                         if (!$_SESSION['permisosMod']['w']) {
                             $arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
                             echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
                         }
-                        $request_user=$this->model->insertMateria($strArea, $strNombre, $strDescripcion, $intGrado, $strNivel, $intHoras, $status);
                     }
+                    $svc = new \Services\MateriaService($this->model);
+                    $r = $svc->guardar($intIdMateria, $n);
 
                     //Validamos si se logro insertar el resultado 
-                    if ($request_user == "dato_guardado") {
-                        $msg = $intIdMateria > 0 ? 'Materia actualizada satisfactoriamente.' : 'Materia registrada satisfactoriamente.';
-                        $arrResponse=array("status"=>true,"msg"=>$msg);
+                    if ($r->ok) {
+                        $arrResponse=array("status"=>true,"msg"=>$r->msg);
 
                     }else {
-                        //Si la materia ya existe
-                        if ($request_user=="exist") {
-                            $arrResponse=array("status"=>false,"msg"=>'La materia ya existe en este grado.');
-                        }else {
-                            //Si ocurrió otro error
-                            $arrResponse=array("status"=>false,"msg"=>'No es posible guardar datos: '.$request_user);
-
-                        }
+                        $arrResponse=array("status"=>false,"msg"=>$r->msg);
                     }
 
                 //Decodifica la respuesta que viene del MODELO para mostrar en las vistas
@@ -93,9 +87,9 @@
 
                     if($arrData[$i]['status'] == 1)
                     {
-                        $arrData[$i]['status'] = '<span class="badge badge-success">Activo</span>';
+                        $arrData[$i]['status'] = \Services\Presenter::estado(1);
                     }else{
-                        $arrData[$i]['status'] = '<span class="badge badge-danger">Inactivo</span>';
+                        $arrData[$i]['status'] = \Services\Presenter::estado(0);
                     }
 
                     if($_SESSION['permisosMod']['r']){

@@ -110,30 +110,19 @@ class Login extends Controllers
         $ipUsuario = $this->getClientIP();
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
-        // Rate limiting (umbrales de $loginConfig, única fuente)
-        $estaBloqueado = $this->model->verificarBloqueo($strUsuario, $this->loginConfig['rate_limit_minutes'], $this->loginConfig['rate_limit_attempts']);
-        if ($estaBloqueado) {
-            $this->model->registrarIntentoLogin($strUsuario, false, $ipUsuario, $userAgent);
-            $this->responseJson(['status' => false, 'msg' => 'Demasiados intentos. Espere 15 minutos.']);
-        }
-
-        // 🔴 LLAMADA CORRECTA: Se envía la contraseña en texto plano
-        $requestUser = $this->model->loginUser($strUsuario, $strPassword);
-
-        if (!$requestUser) {
-            $this->model->registrarIntentoLogin($strUsuario, false, $ipUsuario, $userAgent);
-            $this->responseJson(['status' => false, 'msg' => 'Usuario o contraseña incorrectos']);
-        }
-
-        if ($requestUser['status'] != 1) {
-            $this->model->registrarIntentoLogin($strUsuario, false, $ipUsuario, $userAgent);
-            $this->responseJson(['status' => false, 'msg' => 'Usuario inactivo']);
+        // REV-SVC Fase 2: rate-limit + verificación + estado en el servicio
+        $svc = new \Services\AuthService(
+            $this->model,
+            $this->loginConfig['rate_limit_minutes'],
+            $this->loginConfig['rate_limit_attempts']
+        );
+        $r = $svc->attempt($strUsuario, $strPassword, $ipUsuario, $userAgent);
+        if (!$r->ok) {
+            $this->responseJson(['status' => false, 'msg' => $r->msg]);
         }
 
         // Login exitoso
-        $this->model->registrarIntentoLogin($strUsuario, true, $ipUsuario, $userAgent);
-        
-        $_SESSION['idUser'] = $requestUser['id_persona'];
+        $_SESSION['idUser'] = $r->data['id_persona'];
         $_SESSION['login'] = true;
         session_regenerate_id(true);
         
@@ -167,65 +156,28 @@ class Login extends Controllers
 
         $strEmail = strtolower(strClean($_POST['txtEmailReset']));
 
-        if (!filter_var($strEmail, FILTER_VALIDATE_EMAIL)) {
-            $arrResponse = [
-                'status' => false, 
-                'msg' => 'El formato del email no es válido'
-            ];
-            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
-            die();
-        }
-
-        // Buscar usuario
-        $arrData = $this->model->getUserEmail($strEmail);
-
-        // Por seguridad, siempre responder lo mismo (no revelar si existe)
-        if (empty($arrData)) {
-            $arrResponse = [
-                'status' => true, 
-                'msg' => 'Si el email existe en nuestro sistema, recibirás instrucciones para recuperar tu contraseña'
-            ];
-        } else {
-            $token = token();
-            $idpersona = $arrData['id_persona'];
-            $nombreUsuario = $arrData['nombre'] . ' ' . $arrData['apellido'];
-
-            $url_recovery = base_url() . '/login/confirmUser/' . $strEmail . ',' . $token;
-
-            // AUTH atómico: el token solo queda válido si el correo salió.
-            // Si falla el envío, se invalida para no dejar tokens huérfanos.
-            $dataUsuario = [
-                'nombreUsuario' => $nombreUsuario,
-                'email' => $strEmail,
-                'asunto' => 'Recuperar cuenta - ' . NOMBRE_REMITENTE,
-                'url_recovery' => $url_recovery
-            ];
-
-            // Intentar enviar por PHPMailer primero
-            $sendEmail = sendMailLocal($dataUsuario, 'email_cambioPassword');
-
-            // Si falla, intentar con mail() nativo
-            if (!$sendEmail) {
-                $sendEmail = sendEmail($dataUsuario, 'email_cambioPassword');
+        // REV-SVC Fase 2: solicitud de recuperación en el servicio (atómica)
+        $svc = new \Services\PasswordResetService($this->model, RESET_TOKEN_MINUTES);
+        $r = $svc->request($strEmail, function (array $d) {
+            $d['asunto'] = 'Recuperar cuenta - ' . NOMBRE_REMITENTE;
+            $d['url_recovery'] = base_url() . '/login/confirmUser/' . $d['email'] . ',' . $d['token'];
+            $sent = sendMailLocal($d, 'email_cambioPassword');
+            if (!$sent) {
+                $sent = sendEmail($d, 'email_cambioPassword');
             }
+            return $sent;
+        });
 
-            if ($sendEmail) {
-                $this->model->setTokenUser($idpersona, $token, RESET_TOKEN_MINUTES);
+        if ($r->ok) {
+            if ($r->msg === 'Se ha enviado un correo con instrucciones para recuperar tu contraseña') {
                 error_log("Email de recuperación enviado a: {$strEmail}");
-
-                $arrResponse = [
-                    'status' => true,
-                    'msg' => 'Se ha enviado un correo con instrucciones para recuperar tu contraseña'
-                ];
-            } else {
-                $this->model->setTokenUser($idpersona, '');
-                error_log("Error al enviar email de recuperación a: {$strEmail}");
-
-                $arrResponse = [
-                    'status' => false,
-                    'msg' => 'Error al enviar el correo. Por favor intente más tarde'
-                ];
             }
+            $arrResponse = ['status' => true, 'msg' => $r->msg];
+        } else {
+            if ($r->code === 'mail') {
+                error_log("Error al enviar email de recuperación a: {$strEmail}");
+            }
+            $arrResponse = ['status' => false, 'msg' => $r->msg];
         }
 
         echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
@@ -258,9 +210,9 @@ class Login extends Controllers
             exit;
         }
 
-        $arrResponse = $this->model->getUsuario($strEmail, $strToken);
+        $arrResponse = (new \Services\PasswordResetService($this->model))->confirm($strEmail, $strToken);
 
-        if (empty($arrResponse)) {
+        if (empty($arrResponse) || !$arrResponse->ok) {
             header("Location: " . base_url());
             exit;
         }
@@ -270,7 +222,7 @@ class Login extends Controllers
         $data['page_title'] = "Cambiar Contraseña";
         $data['email'] = $strEmail;
         $data['token'] = $strToken;
-        $data['idpersona'] = $arrResponse['id_persona'];
+        $data['idpersona'] = $arrResponse->data['id_persona'];
         $data['page_functions_js'] = "functions_login.js";
 
         $this->views->getView($this, "cambiar_password", $data);
@@ -308,51 +260,25 @@ class Login extends Controllers
         $strEmail = strClean($_POST['txtEmail']);
         $strToken = strClean($_POST['txtToken']);
 
-        if ($strPassword !== $strPasswordConfirm) {
-            $arrResponse = [
-                'status' => false, 
-                'msg' => 'Las contraseñas no coinciden'
-            ];
-            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
-            die();
-        }
+        // REV-SVC Fase 2: validación y cambio en el servicio
+        $svc = new \Services\PasswordResetService($this->model, RESET_TOKEN_MINUTES);
+        $r = $svc->reset($intIdpersona, $strEmail, $strToken, $strPassword, $strPasswordConfirm);
 
-        if (strlen($strPassword) < PASSWORD_MIN_LENGTH) {
-            $arrResponse = [
-                'status' => false, 
-                'msg' => 'La contraseña debe tener al menos ' . PASSWORD_MIN_LENGTH . ' caracteres'
-            ];
-            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
-            die();
-        }
-
-        $arrResponseUser = $this->model->getUsuario($strEmail, $strToken);
-
-        if (empty($arrResponseUser)) {
-            $arrResponse = [
-                'status' => false, 
-                'msg' => 'Token inválido o expirado'
-            ];
-            echo json_encode($arrResponse, JSON_UNESCAPED_UNICODE);
-            die();
-        }
-
-        $strPasswordHash = $_POST['txtPassword'];
-        $requestPass = $this->model->insertPassword($intIdpersona, $strPasswordHash);
-
-        if ($requestPass) {
+        if ($r->ok) {
             error_log("Contraseña actualizada para usuario ID: {$intIdpersona}");
-            
+
             $arrResponse = [
                 'status' => true, 
                 'msg' => 'Contraseña actualizada correctamente'
             ];
         } else {
-            error_log("Error al actualizar contraseña para usuario ID: {$intIdpersona}");
-            
+            if ($r->code !== 'mismatch' && $r->code !== 'corta' && $r->code !== 'token') {
+                error_log("Error al actualizar contraseña para usuario ID: {$intIdpersona}");
+            }
+
             $arrResponse = [
                 'status' => false, 
-                'msg' => 'Error al actualizar la contraseña. Por favor intente más tarde'
+                'msg' => $r->msg
             ];
         }
 

@@ -130,8 +130,8 @@
 
 			if($isNew){
 				if(!$_SESSION['permisosMod']['w']){ echo json_encode(array("status"=>false,"msg"=>'Sin permiso para crear.'), JSON_UNESCAPED_UNICODE); die(); }
-				// Acceso inicial = C.I. Los cambios de clave son del módulo Usuarios.
-				$strPassword = password_hash($strCi, PASSWORD_DEFAULT);
+				// Acceso inicial = C.I. (regla única en PasswordPolicy). Los cambios de clave son del módulo Usuarios.
+				$strPassword = \Services\PasswordPolicy::defaultPassword($strCi);
 				$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
 				$request = $this->model->insertEstudiante($strCi,$strRUDE,$strlistEst,$strNombre,$strApellido,$strSex,$strTelefono,$strEmail,$strDireccion,$dateFNacimiento,$strPais,$strCiudad,$strProvincia,$strColegioProc,$strEmergencia,$intTipoId,$strPassword,$intStatus,$fotoName,$folio,$estante !== '' ? $estante : null,$gaveta !== '' ? $gaveta : null,$estadoLegajo,$uid);
 				$okMsg = 'Estudiante registrado correctamente.';
@@ -175,53 +175,36 @@
 		}
 
 		// Matricula inmediata tras crear (usa gestión activa + paralelo elegido)
-		// ITERACIÓN 1: soporta Documentación pendiente 30 días hábiles (N-01/F-06).
-		// FLUJO-ÓPTIMO: avisa si queda sin tutores y devuelve id de matrícula para el éxito accionable.
+		// REV-SVC: orquesta InscripcionService (regla única con Matrícula).
 		private function matricularNuevo(string $ci, array $post)
 		{
 			if(empty($_SESSION['permisosMod']['w'])){ return ['msg' => ' (Sin permiso para matricular.)', 'idMat' => 0]; }
-			require_once("Models/MatriculaModel.php");
 			require_once("Models/GestionModel.php");
-			$gm = new GestionModel();
-			$act = $gm->selectGestionAct();
-			$gestion = intval($act["gestion"] ?? date("Y"));
+			$gestion = (new \Services\GestionService(new \GestionModel()))->activa();
+			if($gestion <= 0){ $gestion = intval(date("Y")); }
 			$idParalelo = intval($post['listParaleloMat'] ?? 0);
 			if($idParalelo <= 0){ return ['msg' => ' (Estudiante creado, pero seleccione un paralelo para matricular.)', 'idMat' => 0]; }
-			$mm = new MatriculaModel();
-			// ¿Faltan diferibles? -> sugerir pendiente aunque no marquen el check
-			$faltaDif = (trim($post['txtRUDE'] ?? '') === '' || trim($post['txtEmail'] ?? '') === '' || trim($post['txtCelular'] ?? '') === '');
-			$docPend = !empty($post['chkDocPendiente']) || $faltaDif;
-			$estado = $docPend ? 'Pendiente_Documentos' : 'Confirmado';
-			$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // REV-Est: auditoría también en matrícula inmediata
-			$res = $mm->insertMatricula($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), '', $estado, $uid);
-			if($res == "matricula_guardada"){
-				$extra = "";
-				$idMat = (int)($mm->select(
-					"SELECT m.id_matricula FROM matricula m INNER JOIN estudiante e ON m.id_estudiante=e.id_estudiante
-					 INNER JOIN persona p ON e.id_persona=p.id_persona
-					 WHERE p.ci=? AND m.gestion=? ORDER BY m.id_matricula DESC LIMIT 1", [$ci, $gestion])["id_matricula"] ?? 0);
-				if($docPend){
-					$plazo = function_exists('plazo30Habiles') ? plazo30Habiles() : date('Y-m-d', strtotime('+30 days'));
-					$chk = [
-						'ci' => 1, // CI siempre presente (duro)
-						'cert_nac' => !empty($post['doc_cert_nac']) ? 1 : 0,
-						'rude' => (trim($post['txtRUDE'] ?? '') !== '' ? 1 : (!empty($post['doc_rude']) ? 1 : 0)),
-						'solicitud' => !empty($post['doc_solicitud']) ? 1 : 0,
-					];
-					$comp = !empty($post['chkCompromiso']) || $docPend ? 1 : 0;
-					$mm->setDocumentacionByCiGestion($ci, $gestion, $plazo, $chk, $comp, strClean($post['docsObs'] ?? ''), $estado);
-					$extra = " Documentación pendiente hasta $plazo (30 días hábiles).";
-				}
-				// FLUJO-ÓPTIMO (3): apoderado mínimo — avisar, no bloquear (norma)
-				try {
-					$nt = $mm->select(
-						"SELECT COUNT(*) AS c FROM padre pa INNER JOIN estudiante e ON pa.id_estudiante=e.id_estudiante
-						 INNER JOIN persona p ON e.id_persona=p.id_persona WHERE p.ci=? AND pa.status != 0", [$ci]);
-					if(intval($nt['c'] ?? 0) === 0){ $extra .= " ⚠ Sin tutores vinculados: vincúlelos desde Tutores."; }
-				} catch (Exception $x) {}
-				return ['msg' => " Matriculado en gestión $gestion (10 pensiones generadas).$extra", 'idMat' => $idMat];
+			$uid = intval($_SESSION['idUser'] ?? 0) ?: null;
+			$svc = new \Services\InscripcionService();
+			$docPend = \Services\InscripcionService::requierePendiente(
+				trim($post['txtRUDE'] ?? ''), trim($post['txtEmail'] ?? ''), trim($post['txtCelular'] ?? ''),
+				!empty($post['chkDocPendiente']));
+			$plan = \Services\InscripcionService::planDocs($docPend ? 'Pendiente_Documentos' : 'Confirmado', null, [
+				'cert_nac' => !empty($post['doc_cert_nac']),
+				'rude' => (trim($post['txtRUDE'] ?? '') !== '' ? 1 : (!empty($post['doc_rude']) ? 1 : 0)),
+				'solicitud' => !empty($post['doc_solicitud']),
+			], !empty($post['chkCompromiso']), strClean($post['docsObs'] ?? ''));
+			$r = $svc->inscribir($ci, $gestion, $idParalelo, strClean($post['listTipoMat'] ?? 'Regular'), $plan['estado'], $uid, $plan);
+			if(!$r->ok){
+				$code = ($r->code === 'exist') ? 'matricula_existente' : $r->msg;
+				return ['msg' => " (No se pudo matricular: $code)", 'idMat' => 0];
 			}
-			return ['msg' => " (No se pudo matricular: $res)", 'idMat' => 0];
+			$extra = "";
+			if($docPend){
+				$extra = " Documentación pendiente hasta {$plan['plazo']} (30 días hábiles).";
+			}
+			if($svc->tutoresCount($ci) === 0){ $extra .= " ⚠ Sin tutores vinculados: vincúlelos desde Tutores."; }
+			return ['msg' => " Matriculado en gestión $gestion (10 pensiones generadas).$extra", 'idMat' => $r->data['idMatricula']];
 		}
 
 		// Paralelos con cupo para el alta (gestión activa)
@@ -255,13 +238,7 @@
 				foreach(($arrData ?: []) as $k=>$v){
 					$st = intval($v['status_estudiante']);
 					// 1=Activo (verde) · 2=Inactivo (ámbar, visible sin acceso) · 0=Eliminado (oculto por el SP)
-					if($st === 1){
-						$arrData[$k]['status_estudiante'] = '<span class="badge badge-success">Activo</span>';
-					}elseif($st === 2){
-						$arrData[$k]['status_estudiante'] = '<span class="badge badge-warning">Inactivo</span>';
-					}else{
-						$arrData[$k]['status_estudiante'] = '<span class="badge badge-danger">Eliminado</span>';
-					}
+					$arrData[$k]['status_estudiante'] = \Services\Presenter::estadoEstudiante($st);
 					// Valor crudo para el filtro (columna oculta): DataTables filtra
 					// sobre texto plano, no sobre el HTML del badge.
 					$arrData[$k]['estado_raw'] = $st;

@@ -29,9 +29,7 @@
 				$arrData = $this->model->selectTutores();
 				for ($i=0; $i < count($arrData); $i++) {
 					$btnView=''; $btnEdit=''; $btnDelete='';
-					$arrData[$i]['status_padre'] = $arrData[$i]['status_padre'] == 1
-						? '<span class="badge badge-success">Activo</span>'
-						: '<span class="badge badge-danger">Inactivo</span>';
+					$arrData[$i]['status_padre'] = \Services\Presenter::estado(intval($arrData[$i]['status_padre'] ?? 0));
 					if($_SESSION['permisosMod']['r']){
 						$btnView = '<button class="btn btn-info btn-sm" onClick="fntViewTutor('.$arrData[$i]['id_padre'].')" title="Ver"><i class="far fa-eye"></i></button>';
 					}
@@ -112,53 +110,37 @@
 			foreach(['txtCiTutor','txtNombreTutor','txtApellidoTutor','txtCelTutor','txtEmailTutor'] as $c){
 				if(empty($_POST[$c])){ echo json_encode(array('status'=>false,'msg'=>'Complete los datos del tutor.'),JSON_UNESCAPED_UNICODE);die(); }
 			}
-		$ci = strClean($_POST['txtCiTutor']);
-		// Si marcó "mismo domicilio", se copia la dirección EXACTA del estudiante
-		// desde BD (nunca se guarda el texto literal).
-		$dirTutor = strClean($_POST['txtDireccionTutor'] ?? '');
-		if(!empty($_POST['chkMismoDom']) || strcasecmp(trim($dirTutor), 'mismo domicilio') == 0){
-			$row = $this->model->select(
-				"SELECT p.direccion_dom FROM persona p
-				 INNER JOIN estudiante e ON e.id_persona = p.id_persona
-				 WHERE e.id_estudiante = ?", [$idEstudiante]);
-			$dirTutor = trim($row["direccion_dom"] ?? '');
-		}
-		$tutor = [
-			"ci"=>$ci,
-			"nombre"=>ucwords(strClean($_POST['txtNombreTutor'])),
-			"apellido"=>ucwords(strClean($_POST['txtApellidoTutor'])),
-			"sexo"=>strClean($_POST['listSexoTutor'] ?? 'M'),
-			"direccion"=>$dirTutor,
-				"cel"=>strClean($_POST['txtCelTutor']),
-				"email"=>strtolower(strClean($_POST['txtEmailTutor'])),
-				"usuario"=>strtolower(strClean($_POST['txtEmailTutor'])),
-				"status"=>intval($_POST['listStatusTutor'] ?? 1),
-				"password"=>""
-			];
-			$pwdPlain = trim($_POST['txtPasswordTutor'] ?? '');
-			if($pwdPlain !== ''){ $tutor["password"] = password_hash($pwdPlain, PASSWORD_DEFAULT); }
-			elseif($idPadre == 0){ $tutor["password"] = password_hash($ci, PASSWORD_DEFAULT); }
-			$padre = [
-				"parentesco"=>strClean($_POST['listParentesco'] ?? 'Padre'),
-				"nacionalidad"=>strClean($_POST['txtNacionalidad'] ?? 'Boliviana'),
-				"estado_civil"=>strClean($_POST['listEstadoCivil'] ?? ''),
-				"profesion"=>strClean($_POST['txtProfesion'] ?? ''),
-				"empresa"=>strClean($_POST['txtEmpresa'] ?? ''),
-				"observaciones"=>strClean($_POST['txtObservaciones'] ?? '')
-			];
+			// REV-SVC: armado y domicilio en el servicio (misma forma de datos)
+			$svc = new \Services\TutorService($this->model);
+			$dirTutor = $svc->resolverDomicilio(
+				!empty($_POST['chkMismoDom']),
+				strClean($_POST['txtDireccionTutor'] ?? ''),
+				$idEstudiante
+			);
+			$d = \Services\TutorService::buildData([
+				"ci" => strClean($_POST['txtCiTutor']),
+				"nombre" => ucwords(strClean($_POST['txtNombreTutor'])),
+				"apellido" => ucwords(strClean($_POST['txtApellidoTutor'])),
+				"sexo" => strClean($_POST['listSexoTutor'] ?? 'M'),
+				"cel" => strClean($_POST['txtCelTutor']),
+				"email" => strtolower(strClean($_POST['txtEmailTutor'])),
+				"status" => intval($_POST['listStatusTutor'] ?? 1),
+				"password_plain" => trim($_POST['txtPasswordTutor'] ?? ''),
+				"idPadre" => $idPadre,
+				"parentesco" => strClean($_POST['listParentesco'] ?? 'Padre'),
+				"nacionalidad" => strClean($_POST['txtNacionalidad'] ?? 'Boliviana'),
+				"estado_civil" => strClean($_POST['listEstadoCivil'] ?? ''),
+				"profesion" => strClean($_POST['txtProfesion'] ?? ''),
+				"empresa" => strClean($_POST['txtEmpresa'] ?? ''),
+				"observaciones" => strClean($_POST['txtObservaciones'] ?? ''),
+			], $dirTutor);
 			if($idPadre > 0){
 				if(!$_SESSION['permisosMod']['u']){ echo json_encode(array('status'=>false,'msg'=>'Sin permiso.'),JSON_UNESCAPED_UNICODE);die(); }
-				$res = $this->model->updateTutor($idPadre, $tutor, $idEstudiante, $padre);
-				$msg = 'Tutor actualizado.';
 			}else{
 				if(!$_SESSION['permisosMod']['w']){ echo json_encode(array('status'=>false,'msg'=>'Sin permiso.'),JSON_UNESCAPED_UNICODE);die(); }
-				$res = $this->model->insertTutor($tutor, $idEstudiante, $padre);
-				$msg = 'Tutor registrado.';
 			}
-			if($res == "dato_guardado"){ echo json_encode(array('status'=>true,'msg'=>$msg),JSON_UNESCAPED_UNICODE); }
-			elseif(strpos((string)$res, 'exist:') === 0){ echo json_encode(array('status'=>false,'msg'=>substr($res, 6)),JSON_UNESCAPED_UNICODE); }
-			elseif($res == "exist"){ echo json_encode(array('status'=>false,'msg'=>'CI o email ya registrado.'),JSON_UNESCAPED_UNICODE); }
-			else{ echo json_encode(array('status'=>false,'msg'=>'No se pudo guardar: '.$res),JSON_UNESCAPED_UNICODE); }
+			$r = $svc->guardar($idPadre, $d["tutor"], $idEstudiante, $d["padre"]);
+			echo json_encode($r->toArray(), JSON_UNESCAPED_UNICODE);
 			die();
 		}
 

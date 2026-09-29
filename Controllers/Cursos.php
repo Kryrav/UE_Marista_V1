@@ -62,14 +62,10 @@
 					$esInicial = (strcasecmp($nivel, 'Inicial') == 0);
 					$gradoTxt = $esInicial ? 'Inicial' : ($grado.'°');
 					$mono = $esInicial ? ('IN-'.$sigla) : ($grado.'°'.$sigla);
-					$pct = $cupo > 0 ? min(100, round($total / $cupo * 100)) : 0;
-					if($total >= $cupo && $cupo > 0){
-						$barClass = 'bg-danger'; $ocuClass = 'full'; $ocuTxt = 'Cupo lleno';
-					}elseif($pct >= 85){
-						$barClass = 'bg-warning'; $ocuClass = 'warn'; $ocuTxt = 'Últimos cupos';
-					}else{
-						$barClass = 'bg-success'; $ocuClass = 'ok'; $ocuTxt = 'Disponible';
-					}
+					// REV-SVC: cálculo único de ocupación (antes 3 versiones inconsistentes)
+					$ocu = \Services\CursoService::estadoOcupacion($total, $cupo);
+					$pct = $ocu['pct'];
+					$barClass = $ocu['bar']; $ocuClass = $ocu['class']; $ocuTxt = $ocu['label'];
 					$cardClass = $estado == 1 ? '' : ' curso-inactivo';
 					$search = strtolower($nivel.' '.$grado.' '.$sigla.' '.$tutor.' '.$turno);
 
@@ -132,7 +128,7 @@
 				$idParalelo = intval($idParalelo);
 				$gestion = intval($gestion);
 			}
-			if ($gestion <= 2000) { $gestion = intval(date("Y")); }
+			if ($gestion <= 2000) { $gestion = (new \Services\GestionService())->resolver($gestion); }
 			if($_SESSION['permisosMod']['r']){
                 if($idParalelo > 0 && $gestion > 2000 ) //Validamos que tengamos un ID válido
                 {
@@ -174,9 +170,7 @@
 							if($_SESSION['permisosMod']['r'] && $idEst > 0){
 								$btnView = '<button class="btn btn-info btn-sm btn-block mb-2" onClick="fntViewEstudiante('.$idEst.')" title="Ver Estudiante">Ver Estudiante</button>';
 							}
-							$badge = $st == 1
-								? '<span class="badge badge-success">Activo</span>'
-								: '<span class="badge badge-danger">Inactivo</span>';
+							$badge = \Services\Presenter::estado(intval($st));
 							$card='	<tr>
 										<td>'.$ci.'</td>
 										<td>'.$mat.'</td>
@@ -205,8 +199,8 @@
 			$html='';
 			if ($arrData) {
 				for ($i=0; $i < count($arrData); $i++) { 
-					$espacios=0;
-					$espacios=$arrData[$i]['cupo'] - $arrData[$i]['total_inscritos'];
+					// REV-SVC: cupo nunca negativo (unifica con cards y alta)
+					$espacios = \Services\CursoService::cupoLibre(intval($arrData[$i]['cupo'] ?? 0), intval($arrData[$i]['total_inscritos'] ?? 0));
 					$html.='<option value="'.$arrData[$i]['id_paralelo'].'">'.$arrData[$i]['nivel'].': '.$arrData[$i]['grado'].'-'.$arrData[$i]['sigla'].'  / Cupo: '.$espacios.'</option>';
 				}
 				
@@ -226,7 +220,7 @@
 			}
 			$idParalelo = intval($idParalelo);
 			$gestion = intval($gestion);
-			if ($gestion <= 2000) { $gestion = intval(date("Y")); }
+			if ($gestion <= 2000) { $gestion = (new \Services\GestionService())->resolver($gestion); }
 			if($idParalelo <= 0){ header("Location:".base_url().'/cursos'); die(); }
 			$lista = $this->model->selectListaImprimir($idParalelo, $gestion);
 			if(empty($lista["curso"])){ header("Location:".base_url().'/cursos'); die(); }
@@ -252,7 +246,7 @@
 				$idParalelo = intval($idParalelo);
 				$gestion = intval($gestion);
 			}
-			if ($gestion <= 2000) { $gestion = intval(date("Y")); }
+			if ($gestion <= 2000) { $gestion = (new \Services\GestionService())->resolver($gestion); }
 
 			$datoCurso='';
 			$arrData = $this->model->selectdatosCurso($idParalelo,$gestion);
@@ -276,9 +270,7 @@
 				$ema = htmlspecialchars($arrData[$i]['email'] ?? $arrData[$i]['email_pers'] ?? '');
 				$cel = htmlspecialchars($arrData[$i]['cel'] ?? $arrData[$i]['celular_pers'] ?? '');
 				$st = intval($arrData[$i]['status'] ?? $arrData[$i]['status_estudiante'] ?? 0);
-				$badge = $st == 1
-					? '<span class="badge badge-success">Activo</span>'
-					: '<span class="badge badge-danger">Inactivo</span>';
+				$badge = \Services\Presenter::estado($st);
 				$card='	<tr>
 							<td>'.$ci.'</td>
 							<td>'.$mat.'</td>
@@ -320,10 +312,9 @@
 		public function docentesTutores()
 		{
 			if($_SESSION['permisosMod']['r']){
-				require_once("Models/DocentesModel.php");
-				$dm = new DocentesModel();
+				$svc = new \Services\CursoService();
 				$html = '<option value="0">Sin asignación</option>';
-				foreach(($dm->optionsActivos() ?: []) as $d){
+				foreach(($svc->opcionesTutores() ?: []) as $d){
 					$html .= '<option value="'.$d['id_persona'].'">'.htmlspecialchars($d['nombre_completo']).'</option>';
 				}
 				echo $html;
@@ -336,28 +327,27 @@
 		{
 			if (!$_POST) { die(); }
 			$id = intval($_POST['idParalelo'] ?? 0);
-			$rawGrado = strClean($_POST['listGrado'] ?? '');
-			if (strtolower($rawGrado) === 'inicial') {
-				$nivel = 'Inicial'; $grado = 0;
-			}else{
-				$nivel = strClean($_POST['listNivel'] ?? 'Primaria');
-				if ($nivel == '' || $nivel == '1') { $nivel = 'Primaria'; }
-				$grado = intval($rawGrado);
-			}
-			$sigla = strClean($_POST['listSigla'] ?? 'A');
-			$rawTurno = strClean($_POST['listTurno'] ?? 'M');
-			$turno = ($rawTurno === 'T' || strtolower($rawTurno) === 'tarde') ? 'Tarde' : 'Mañana';
+			// REV-SVC: normalización en el servicio (niveles/turnos/cupo/status)
+			$n = \Services\CursoService::normalizar([
+				'grado' => strClean($_POST['listGrado'] ?? ''),
+				'nivel' => strClean($_POST['listNivel'] ?? 'Primaria'),
+				'sigla' => strClean($_POST['listSigla'] ?? 'A'),
+				'turno' => strClean($_POST['listTurno'] ?? 'M'),
+				'cupo' => intval($_POST['intCupo'] ?? 30),
+				'status' => intval($_POST['status'] ?? $_POST['TipoEstudiante'] ?? 1),
+			]);
+			$nivel = $n['nivel']; $grado = $n['grado'];
+			$sigla = $n['sigla'];
+			$turno = $n['turno'];
 			// Tutor: solo docentes activos de la unidad (por id); 0 = Sin asignación
-			require_once("Models/DocentesModel.php");
-			$dm = new DocentesModel();
-			$tutor = $dm->nombreTutor(intval($_POST['listTutorDocente'] ?? 0));
-			if($tutor === null){
-				echo json_encode(array('status'=>false,'msg'=>'El tutor debe ser un docente activo de la unidad educativa.'),JSON_UNESCAPED_UNICODE); die();
+			$svc = new \Services\CursoService();
+			$rt = $svc->resolverTutor(intval($_POST['listTutorDocente'] ?? 0));
+			if(!$rt->ok){
+				echo json_encode(array('status'=>false,'msg'=>$rt->msg),JSON_UNESCAPED_UNICODE); die();
 			}
-			$cupo = intval($_POST['intCupo'] ?? 30);
-			if ($cupo <= 0) { $cupo = 30; }
-			$status = intval($_POST['status'] ?? $_POST['TipoEstudiante'] ?? 1);
-			if ($status != 0 && $status != 1) { $status = 1; }
+			$tutor = $rt->data['tutor'];
+			$cupo = $n['cupo'];
+			$status = $n['status'];
 
 			if ($id > 0) {
 				if (!$_SESSION['permisosMod']['u']) { echo json_encode(array('status'=>false,'msg'=>'Sin permiso.'),JSON_UNESCAPED_UNICODE); die(); }

@@ -36,9 +36,9 @@
 
 				if($arrData[$i]['status'] == 1)
 				{
-					$arrData[$i]['status'] = '<span class="badge badge-success">Activo</span>';
+					$arrData[$i]['status'] = \Services\Presenter::estado(1);
 				}else{
-					$arrData[$i]['status'] = '<span class="badge badge-danger">Inactivo</span>';
+					$arrData[$i]['status'] = \Services\Presenter::estado(0);
 				}
 
 				if($_SESSION['permisosMod']['u']){

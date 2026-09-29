@@ -24,15 +24,14 @@
                         COUNT(*) AS cuotas,
                         SUM(p.estado_pago=1) AS pagadas,
                         SUM(p.estado_pago=0) AS pendientes,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cobrado,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS adeudado,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 AND p.fecha_vencimiento < CURDATE() THEN p.monto ELSE 0 END),0) AS vencido,
+                        ".\Services\FinanzasService::SQL_COB." AS cobrado,
+                        ".\Services\FinanzasService::SQL_ADE." AS adeudado,
+                        ".\Services\FinanzasService::SQL_VEN." AS vencido,
                         SUM(p.estado_pago=0 AND p.fecha_vencimiento < CURDATE()) AS vencidas
                  FROM pensiones p INNER JOIN matricula m ON p.id_matricula = m.id_matricula
                  WHERE p.status = 1 AND m.gestion = ?", [$g]);
             $r["gestion"] = $g;
-            $r["pct_cobro"] = ($r["cobrado"] + $r["adeudado"]) > 0
-                ? round(100 * $r["cobrado"] / ($r["cobrado"] + $r["adeudado"]), 1) : 0;
+            $r["pct_cobro"] = \Services\FinanzasService::pctCobro($r["cobrado"] ?? 0, $r["adeudado"] ?? 0);
             return $r;
         }
 
@@ -44,9 +43,9 @@
             foreach($meses as $i => $mes){
                 $r = $this->select(
                     "SELECT COUNT(*) AS cuotas, SUM(p.estado_pago=1) AS pagadas, SUM(p.estado_pago=0) AS pendientes,
-                            COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cobrado,
-                            COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS adeudado,
-                            COALESCE(SUM(CASE WHEN p.estado_pago=0 AND p.fecha_vencimiento < CURDATE() THEN p.monto ELSE 0 END),0) AS vencido
+                            ".\Services\FinanzasService::SQL_COB." AS cobrado,
+                            ".\Services\FinanzasService::SQL_ADE." AS adeudado,
+                            ".\Services\FinanzasService::SQL_VEN." AS vencido
                      FROM pensiones p INNER JOIN matricula m ON p.id_matricula = m.id_matricula
                      WHERE p.status = 1 AND m.gestion = ? AND p.mes_num = ?", [$g, $i + 2]);
                 $r["mes"] = $mes; $r["gestion"] = $g;
@@ -60,9 +59,9 @@
             return $this->select_all(
                 "SELECT m.gestion, COUNT(DISTINCT m.id_matricula) AS matriculas, COUNT(*) AS cuotas,
                         SUM(p.estado_pago=1) AS pagadas, SUM(p.estado_pago=0) AS pendientes,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cobrado,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS adeudado,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 AND p.fecha_vencimiento < CURDATE() THEN p.monto ELSE 0 END),0) AS vencido
+                        ".\Services\FinanzasService::SQL_COB." AS cobrado,
+                        ".\Services\FinanzasService::SQL_ADE." AS adeudado,
+                        ".\Services\FinanzasService::SQL_VEN." AS vencido
                  FROM pensiones p INNER JOIN matricula m ON p.id_matricula = m.id_matricula
                  WHERE p.status = 1 GROUP BY m.gestion ORDER BY m.gestion");
         }
@@ -74,8 +73,8 @@
                 "SELECT CONCAT(pa.nivel,' ',pa.grado,' \"',pa.sigla,'\"') AS curso, pa.tutor,
                         COUNT(DISTINCT m.id_matricula) AS matriculas, COUNT(*) AS cuotas,
                         SUM(p.estado_pago=1) AS pagadas, SUM(p.estado_pago=0) AS pendientes,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cobrado,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS adeudado
+                        ".\Services\FinanzasService::SQL_COB." AS cobrado,
+                        ".\Services\FinanzasService::SQL_ADE." AS adeudado
                  FROM pensiones p
                  INNER JOIN matricula m ON p.id_matricula = m.id_matricula
                  INNER JOIN paralelo pa ON pa.id_paralelo = m.id_paralelo

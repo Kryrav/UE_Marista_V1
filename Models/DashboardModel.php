@@ -14,9 +14,9 @@
             $s["matriculas_gestion"] = $this->select("SELECT COUNT(*) c FROM matricula WHERE gestion=$gestion AND status=1")["c"] ?? 0;
             $s["docentes"] = $this->select("SELECT COUNT(*) c FROM persona WHERE id_rol=5 AND status=1")["c"] ?? 0;
             $fin = $this->select(
-                "SELECT COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cob,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS ade,
-                        COALESCE(SUM(CASE WHEN p.estado_pago=0 AND p.fecha_vencimiento < CURDATE() THEN p.monto ELSE 0 END),0) AS ven,
+                "SELECT ".\Services\FinanzasService::SQL_COB." AS cob,
+                        ".\Services\FinanzasService::SQL_ADE." AS ade,
+                        ".\Services\FinanzasService::SQL_VEN." AS ven,
                         SUM(p.estado_pago=1) AS npag, SUM(p.estado_pago=0) AS npen
                  FROM pensiones p INNER JOIN matricula m ON p.id_matricula=m.id_matricula
                  WHERE p.status=1 AND m.gestion=$gestion");
@@ -34,8 +34,8 @@
             $s["serie_cob"] = []; $s["serie_ade"] = [];
             foreach($meses as $i => $mes){
                 $row = $this->select(
-                    "SELECT COALESCE(SUM(CASE WHEN p.estado_pago=1 THEN p.monto ELSE 0 END),0) AS cob,
-                            COALESCE(SUM(CASE WHEN p.estado_pago=0 THEN p.monto ELSE 0 END),0) AS ade
+                    "SELECT ".\Services\FinanzasService::SQL_COB." AS cob,
+                            ".\Services\FinanzasService::SQL_ADE." AS ade
                      FROM pensiones p INNER JOIN matricula m ON p.id_matricula=m.id_matricula
                      WHERE p.status=1 AND m.gestion=$gestion AND p.mes_num=".($i+2));
                 $s["serie_cob"][] = (float)($row["cob"] ?? 0);

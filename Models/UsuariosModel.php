@@ -140,8 +140,9 @@ class UsuariosModel extends Persona {
      */
     public function selectPensiones(int $ciEstudiante) {
         try {
-            // Crear instancia del modelo de pensiones
-            $pensionModel = new PensionModel();
+            // REV-SVC Fase 2: clase correcta (era PensionModel, inexistente).
+            require_once("Models/PensionesModel.php");
+            $pensionModel = new PensionesModel();
             return $pensionModel->getPensionesByCI($ciEstudiante);
             
         } catch (Exception $e) {

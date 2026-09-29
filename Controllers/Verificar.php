@@ -25,13 +25,14 @@
 			$data['valido'] = false;
 			$data['recibo'] = null;
 			if($ok){
-				require_once("Models/PensionesModel.php");
-				$mp = new PensionesModel();
-				$row = $mp->verificarRecibo($nro);
-				if(!empty($row) && intval($row["estado_pago"]) === 1){
-					$data['valido'] = true;
-					$data['recibo'] = $row;
-				}
+			require_once("Models/PensionesModel.php");
+			$mp = new PensionesModel();
+			$row = $mp->verificarRecibo($nro);
+			// REV-SVC: regla única de verificabilidad (misma que el recibo)
+			if(!empty($row) && \Services\ReciboService::esVerificable($row)){
+				$data['valido'] = true;
+				$data['recibo'] = $row;
+			}
 			}
 			require_once("Views/Verificar/recibo.php");
 			die();

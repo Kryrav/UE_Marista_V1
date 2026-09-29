@@ -31,12 +31,7 @@
                     $btnView = '';
                     $btnDelete = '';
 
-                    if($arrData[$i]['status_Pension'] == 1)
-                    {
-                        $arrData[$i]['status_Pension'] = '<span class="badge badge-success">Activo</span>';
-                    }else{
-                        $arrData[$i]['status_Pension'] = '<span class="badge badge-danger">Inactivo</span>';
-                    }
+                    $arrData[$i]['status_Pension'] = \Services\Presenter::estado(intval($arrData[$i]['status_Pension'] ?? 0));
 					$arrData[$i]['Estado_Pago'] = '<span class="badge badge-success px-3">'.$arrData[$i]['Estado_Pago'].'</span>';
 					$arrData[$i]['nro_recibo'] = $arrData[$i]['nro_recibo'] !== null
 						? '<b>'.str_pad((string)$arrData[$i]['nro_recibo'], 6, '0', STR_PAD_LEFT).'</b>'
@@ -85,35 +80,33 @@
 								if($_SESSION['permisosMod']['r']){
 									$btnView = '<button class="btn btn-info btn-sm btnViewMateria" onClick="fntViewPension('.$arrData[$i]['id_pensiones'].')" title="Ver recibo"><i class="far fa-eye"></i></button>';
 								}
-								if($_SESSION['permisosMod']['u']){
-									if ($arrData[$i]['estado_pago'] == 1) {
-										$btnEdit = '';
-									}else {
-										$btnEdit = '<button class="btn btn-success  btn-sm btnEditMateria" onClick="fntPagarPension('.$arrData[$i]['id_pensiones'].')" title="Pagar Mensualidad"><i class="fa fa-money"></i></button>';
-									}
+							if($_SESSION['permisosMod']['u']){
+								// REV-SVC: regla única (FinanzasService)
+								if (!\Services\FinanzasService::puedePagar($arrData[$i])) {
+									$btnEdit = '';
+								}else {
+									$btnEdit = '<button class="btn btn-success  btn-sm btnEditMateria" onClick="fntPagarPension('.$arrData[$i]['id_pensiones'].')" title="Pagar Mensualidad"><i class="fa fa-money"></i></button>';
 								}
-								// Anular solo tiene sentido sobre pagos ya realizados
-								if($_SESSION['permisosMod']['d'] && $arrData[$i]['estado_pago'] == 1){
-									$btnDelete = '<button class="btn btn-danger btn-sm btnDelMateria" onClick="fntAnularPension('.$arrData[$i]['id_pensiones'].')" title="Anular pago"><i class="fas fa-ban"></i></button>';
+							}
+							// Anular solo tiene sentido sobre pagos ya realizados
+							if($_SESSION['permisosMod']['d'] && \Services\FinanzasService::puedeAnular($arrData[$i])){
+								$btnDelete = '<button class="btn btn-danger btn-sm btnDelMateria" onClick="fntAnularPension('.$arrData[$i]['id_pensiones'].')" title="Anular pago"><i class="fas fa-ban"></i></button>';
 
-								}
+							}
 
-								// Estado: pagado / vencido / pendiente (con fecha de vencimiento)
-								if($arrData[$i]['estado_pago'] == 1)
-								{
-									$arrData[$i]['estado_pago'] = '<span class="badge badge-success m-1 px-3">Pagado</span>';
-									$btnImprimir = '<button class="btn btn-secundary border-dark btn-sm btnViewMateria" onClick="fntImprimirRecibo('.$arrData[$i]['id_pensiones'].')" title="Imprimir"><i class="fa fa-print"></i></button>';
+							// Estado: pagado / vencido / pendiente (con fecha de vencimiento)
+							$estPen = \Services\FinanzasService::estadoPension($arrData[$i]);
+							$arrData[$i]['estado_pago'] = $estPen['badge'];
+							if($estPen['clave'] === 'pagado')
+							{
+								$btnImprimir = '<button class="btn btn-secundary border-dark btn-sm btnViewMateria" onClick="fntImprimirRecibo('.$arrData[$i]['id_pensiones'].')" title="Imprimir"><i class="fa fa-print"></i></button>';
 
-								}elseif(!empty($arrData[$i]['vencida'])){
-									$arrData[$i]['estado_pago'] = '<span class="badge badge-danger m-1 px-3">Vencido</span><br><small class="text-muted">venció '.$arrData[$i]['fecha_vencimiento'].'</small>';
-								}else{
-									$arrData[$i]['estado_pago'] = '<span class="badge badge-warning m-1 px-3">Pendiente</span><br><small class="text-muted">vence '.$arrData[$i]['fecha_vencimiento'].'</small>';
-								}
+							}
 							$arrData[$i]['options'] = '<div class="text-center">'.$btnImprimir.' '.$btnView.' '.$btnEdit.' '.$btnDelete.'</div>';
-							$nro = $arrData[$i]['nro_recibo'] ?? null;
-							$celdaRecibo = ($nro !== null && $nro !== '')
-								? '<b>'.str_pad((string)$nro, 6, '0', STR_PAD_LEFT).'</b>'
-								: '<span class="text-muted">—</span>';
+						$nro = $arrData[$i]['nro_recibo'] ?? null;
+						$celdaRecibo = ($nro !== null && $nro !== '')
+							? \Services\FinanzasService::folio((int)$nro)
+							: '<span class="text-muted">—</span>';
 
 							$html.='<tr >
 										<td>'.$arrData[$i]['matricula'].'</td>
@@ -230,9 +223,9 @@
 		{
 			if($_SESSION['permisosMod']['r']){
 				$arrData = $this->model->morosidad();
-				foreach(($arrData ?: []) as $k=>$v){
-					$arrData[$k]['estado'] = '<span class="badge badge-danger">Vencido hace '.$v['dias_atraso'].' día(s)</span>';
-					$arrData[$k]['monto'] = 'Bs. '.number_format((float)$v['monto'], 2);
+			foreach(($arrData ?: []) as $k=>$v){
+				$arrData[$k]['estado'] = '<span class="badge badge-danger">Vencido hace '.$v['dias_atraso'].' día(s)</span>';
+				$arrData[$k]['monto'] = \Services\FinanzasService::bolivianos($v['monto']);
 					$id = intval($v['id_pensiones']);
 					$btn = '';
 					if($_SESSION['permisosMod']['u']){
@@ -268,22 +261,20 @@
 			if(empty($_SESSION['permisosMod']['w'])){
 				header("Location:".base_url().'/Pensiones');
 			}
-			$pension = intval(strclean($idPension));
-			$formato = strtolower(trim(strclean($formato)));
-			if(!in_array($formato, ['', 'carta', 'termica'], true)){ $formato = ''; }
-			$Colegio = $this->model->getColegio(1); //1 es el id del colegio marista 1
-			$datePension = $this->model->selectPensionDate($pension);
-			if(empty($datePension)){ header("Location:".base_url().'/Pensiones'); die(); }
-			$nro = intval($datePension['nro_recibo'] ?? 0);
-			$arrData = array("pension"=>$datePension,"colegio"=>$Colegio);
-			$data['page_tag'] = "Recibo";
-			$data['page_title'] = "Recibo";
-			$data['page_name'] = "Recibo";
-			$data['recibo'] = $arrData;
-			$data['formato'] = $formato;
-			// QR solo si el pago sigue vigente (con folio); si se anuló, no verifica
-			$data['verify_url'] = ($nro > 0 && intval($datePension['estado_pago']) === 1)
-				? qrVerifyUrl($nro) : '';
+		$pension = intval(strclean($idPension));
+		$formato = \Services\ReciboService::normalizarFormato(strclean($formato));
+		$Colegio = $this->model->getColegio(1); //1 es el id del colegio marista 1
+		$datePension = $this->model->selectPensionDate($pension);
+		if(empty($datePension)){ header("Location:".base_url().'/Pensiones'); die(); }
+		$arrData = array("pension"=>$datePension,"colegio"=>$Colegio);
+		$data['page_tag'] = "Recibo";
+		$data['page_title'] = "Recibo";
+		$data['page_name'] = "Recibo";
+		$data['recibo'] = $arrData;
+		$data['formato'] = $formato;
+		// QR solo si el pago sigue vigente (con folio); si se anuló, no verifica
+		$data['verify_url'] = \Services\ReciboService::esVerificable($datePension)
+			? \Services\ReciboService::urlVerificacion(intval($datePension['nro_recibo'] ?? 0)) : '';
 			$this->views->getView($this,"recibo",$data);
 		}
     }

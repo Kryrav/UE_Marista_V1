@@ -56,35 +56,14 @@
                     $btnEdit = '';
                     $btnDelete = '';
 
-                    if($arrData[$i]['estado_matricula'] == 1)
-                    {
-                        $arrData[$i]['estado_matricula'] = '<span class="badge badge-success">Activo</span>';
-                    }else{
-                        $arrData[$i]['estado_matricula'] = '<span class="badge badge-danger">Inactivo</span>';
-                    }
-                    // ITERACIÓN 1: feedback visual de documentación pendiente (U-03/U-04)
+                    $arrData[$i]['estado_matricula'] = \Services\Presenter::estado(intval($arrData[$i]['estado_matricula'] ?? 0));
+                    // REV-SVC: badges únicos (misma salida: pendiente/docs/terminales)
                     $ei = trim($arrData[$i]['estado_inscripcion'] ?? '');
-                    if($ei === 'Pendiente_Documentos'){
-                        $plazo = trim($arrData[$i]['plazo_documentos_hasta'] ?? '');
-                        $alerta = '';
-                        if($plazo !== '' && function_exists('diasHabilesRestantes')){
-                            try { $r = diasHabilesRestantes($plazo); $alerta = $r < 0 ? ' (vencido '.abs($r).'d)' : " ($r d)"; } catch(Exception $x){}
-                        }
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-warning" title="Plazo: '.htmlspecialchars($plazo).'">Pendiente docs'.$alerta.'</span>';
-                    }elseif($ei === 'Confirmado'){
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-success">Confirmado</span>';
-                    }elseif($ei === 'Inscrito'){
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-info">Inscrito</span>';
-                    // ITERACIÓN 2: estados terminales con historial preservado (F-09)
-                    }elseif($ei === 'Retirado'){
-                        $mot = trim($arrData[$i]['motivo_estado'] ?? '');
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-secondary"'.($mot !== '' ? ' title="'.htmlspecialchars($mot).'"' : '').'>Retirado</span>';
-                    }elseif($ei === 'Trasladado'){
-                        $mot = trim($arrData[$i]['motivo_estado'] ?? '');
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-dark"'.($mot !== '' ? ' title="'.htmlspecialchars($mot).'"' : '').'>Trasladado</span>';
-                    }elseif($ei === 'Egresado'){
-                        $arrData[$i]['estado_inscripcion'] = '<span class="badge badge-primary"'.(trim($arrData[$i]['motivo_estado'] ?? '') !== '' ? ' title="'.htmlspecialchars($arrData[$i]['motivo_estado']).'"' : '').'>Egresado</span>';
-                    }
+                    $arrData[$i]['estado_inscripcion'] = \Services\Presenter::estadoInscripcion(
+                        $ei,
+                        trim($arrData[$i]['motivo_estado'] ?? ''),
+                        trim($arrData[$i]['plazo_documentos_hasta'] ?? '')
+                    );
 
                     if($_SESSION['permisosMod']['r']){
                         $btnView = '<button class="btn btn-info btn-sm btnViewMatricula" onClick="fntViewMatricula('.$arrData[$i]['id_matricula'].')" title="Ver Matrícula"><i class="far fa-eye"></i></button>';
@@ -179,13 +158,20 @@
 					}
 					if ($_SESSION['permisosMod']['w']) {
 						$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
-						$request_user=$this->model->insertMatricula($strCi,$intGestion,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$uid);
-						if($request_user == "matricula_guardada" && ($docPend || $plazo !== null)){
-							$this->model->setDocumentacionByCiGestion($strCi,$intGestion,$plazo,$chkDocs,$comp,$obsDocs,$strStatus);
-						}
-						if($request_user == "matricula_guardada" && $esRect){
-							$this->model->setMotivoByCiGestion($strCi,$intGestion,'Rectificación histórica: '.$motivoRect);
-						}
+						// REV-SVC: inserción + docs + motivo vía servicio (regla única)
+						$svc = new \Services\InscripcionService($this->model);
+						$plan = \Services\InscripcionService::planDocs($strStatus, trim($_POST['plazoDocs'] ?? '') ?: null, [
+							'cert_nac' => !empty($_POST['doc_cert_nac']),
+							'rude' => !empty($_POST['doc_rude']),
+							'solicitud' => !empty($_POST['doc_solicitud']),
+						], !empty($_POST['chkCompromiso']), $obsDocs);
+						$r = $svc->inscribir($strCi, $intGestion, $intIdParalelo, $strTipoMatricula, $strStatus, $uid,
+							($docPend || $plan['plazo'] !== null) ? $plan : null,
+							$esRect ? $motivoRect : null);
+						$request_user = $r->ok ? "matricula_guardada" : ($r->code === 'exist' ? "matricula_existente" : $r->msg);
+						// REV-SVC: id exacto del servicio (ultimaMatriculaByCi ordena por gestión
+						// DESC y devolvería otra gestión en rectificaciones).
+						$svcIds = ['idMatricula' => intval($r->data['idMatricula'] ?? 0), 'idEstudiante' => 0];
 					}else {
 						$arrResponse=array("status"=>false,"msg"=>'Error. Usted no tiene permiso para ejecutar la acción.');
 						echo json_encode($arrResponse,JSON_UNESCAPED_UNICODE);die();
@@ -220,7 +206,7 @@
 					if(!empty($esRect)){ $msg .= ' (Rectificación fuera de gestión activa, con motivo registrado).'; }
 					$last = $this->model->ultimaMatriculaByCi($strCi);
 					$arrResponse=array("status"=>true,"msg"=>$msg,
-						"idMatricula"=>intval($last['id_matricula'] ?? 0),
+						"idMatricula"=>!empty($svcIds['idMatricula']) ? $svcIds['idMatricula'] : intval($last['id_matricula'] ?? 0),
 						"idEstudiante"=>intval($last['id_estudiante'] ?? 0));
 				}else if ($request_user == "matricula_actualizada") {
 					$arrResponse=array("status"=>true,"msg"=>'Matrícula actualizada satisfactoriamente.',
@@ -275,23 +261,22 @@
 				"SELECT p.id_paralelo, p.nivel, p.grado, p.sigla, p.turno, p.cupo,
 					(SELECT COUNT(*) FROM matricula m WHERE m.id_paralelo = p.id_paralelo AND m.gestion = ? AND m.status = 1) AS inscritos
 				 FROM paralelo p WHERE p.id_paralelo = ?", [$gestion, $paralelo]);
-			$gm = $this->model->select("SELECT monto_pension FROM gestion WHERE gestion = ?", [$gestion]);
+			// REV-SVC: monto y cupo por servicios (regla única)
 			$dup = null;
 			$tutores = 0;
 			if(!empty($est)){
 				$dup = $this->model->select(
 					"SELECT id_matricula, estado_inscripcion FROM matricula WHERE id_estudiante = ? AND gestion = ? ORDER BY id_matricula DESC LIMIT 1",
 				 [$est['id_estudiante'], $gestion]);
-				$t = $this->model->select(
-					"SELECT COUNT(*) AS c FROM padre WHERE id_estudiante = ? AND status != 0", [$est['id_estudiante']]);
-				$tutores = intval($t['c'] ?? 0);
+				$svcPrev = new \Services\InscripcionService($this->model);
+				$tutores = $svcPrev->tutoresCount($ci);
 			}
-			$monto = floatval($gm['monto_pension'] ?? 0);
+			$monto = (new \Services\GestionService())->monto($gestion);
 			$warn = [];
 			if(empty($est)){ $warn[] = 'Estudiante nuevo: se creará con el alta.'; }
 			if($dup){ $warn[] = 'Ya matriculado en '.$gestion.' ('.$dup['estado_inscripcion'].'): se bloqueará el duplicado.'; }
 			if($par){
-				$libres = intval($par['cupo']) - intval($par['inscritos']);
+				$libres = \Services\CursoService::cupoLibre(intval($par['cupo']), intval($par['inscritos']));
 				if($libres <= 0){ $warn[] = 'Paralelo SIN CUPO.'; }
 			} else { $warn[] = 'Paralelo inexistente.'; }
 			if($monto <= 0){ $warn[] = 'Gestión sin monto de pensión configurado.'; }
@@ -324,7 +309,7 @@
 		}
 
 		// ITERACIÓN 2 (F-04): rematricular regular en la gestión destino.
-		// Reutiliza insertMatricula (SP genera las 10 pensiones); no duplica por gestión.
+		// REV-SVC: orquesta InscripcionService (regla única con Estudiantes).
 		public function rematricular()
 		{
 			if ($_POST) {
@@ -339,48 +324,19 @@
 				if($ci === '' || $gestion < 2000 || $gestion > 2100 || $paralelo <= 0){
 					echo json_encode(array("status"=>false,"msg"=>'Datos incompletos: CI, gestión válida y paralelo.'),JSON_UNESCAPED_UNICODE);die();
 				}
-				// I2-addenda: destino = gestión activa, salvo rectificación autorizada
-				$gAct = $this->gestionActivaAnio();
-				if($gAct > 0 && $gestion !== $gAct){
-					$motivoRect = strClean($_POST['motivoRectificacion'] ?? '');
-					if(!$this->puedeRectificarGestion()){
-						echo json_encode(array("status"=>false,"msg"=>'Solo se rematricula en la gestión activa ('.$gAct.').'),JSON_UNESCAPED_UNICODE);die();
-					}
-					if($motivoRect === ''){
-						echo json_encode(array("status"=>false,"msg"=>'Rectificación fuera de gestión activa: indique el motivo.'),JSON_UNESCAPED_UNICODE);die();
-					}
-				}
-				if($tipo === ''){ $tipo = 'Regular'; }
-				// FLUJO: también sirve para PRIMERA matrícula de un existente sin historial
-				// (alta sin chkMatricular). Si no hay última, se inscribe como nuevo en destino.
-				$last = $this->model->ultimaMatriculaByCi($ci);
-				$esPrimera = empty($last);
-				if($esPrimera){
-					// Debe existir el estudiante (aunque sea sin matrículas)
-					$ex = $this->model->select(
-						"SELECT e.id_estudiante FROM estudiante e INNER JOIN persona p ON e.id_persona=p.id_persona WHERE p.ci=? AND e.status != 0", [$ci]);
-					if(empty($ex)){
-						echo json_encode(array("status"=>false,"msg"=>'El CI no existe. Registre al estudiante primero.'),JSON_UNESCAPED_UNICODE);die();
-					}
-				}
-				$res = $this->model->insertMatricula($ci, $gestion, $paralelo, $tipo, '', $esPrimera ? 'Confirmado' : 'Inscrito', intval($_SESSION['idUser'] ?? 0) ?: null);
-				if($res == "matricula_guardada"){
-					if($gAct > 0 && $gestion !== $gAct){
-						$this->model->setMotivoByCiGestion($ci, $gestion, 'Rectificación histórica: '.strClean($_POST['motivoRectificacion'] ?? ''));
-					}
-					$cursoAnt = $last['curso'] ?? '—';
-					$idEst = intval($last['id_estudiante'] ?? 0);
-					if($idEst <= 0 && isset($ex) && !empty($ex)){ $idEst = intval($ex['id_estudiante']); }
-					$new = $this->model->ultimaMatriculaByCi($ci);
-					$msg = $esPrimera
-						? "Matriculado en gestión $gestion (10 pensiones generadas)."
-						: "Rematriculado en gestión $gestion (10 pensiones generadas). Curso anterior: $cursoAnt.";
-					echo json_encode(array("status"=>true,"msg"=>$msg,
-						"idMatricula"=>intval($new['id_matricula'] ?? 0), "idEstudiante"=>$idEst),JSON_UNESCAPED_UNICODE);
-				}elseif($res == "matricula_existente"){
+				$uid = intval($_SESSION['idUser'] ?? 0) ?: null;
+				$rol = intval($_SESSION['userData']['idrol'] ?? 0);
+				$svc = new \Services\InscripcionService($this->model);
+				$r = $svc->rematricular($ci, $gestion, $paralelo, $tipo, $uid,
+					(new \Services\GestionService())->activa(), ($rol === 1 || $rol === 2),
+					strClean($_POST['motivoRectificacion'] ?? ''));
+				if($r->ok){
+					echo json_encode(array("status"=>true,"msg"=>$r->msg,
+						"idMatricula"=>$r->data['idMatricula'], "idEstudiante"=>$r->data['idEstudiante']),JSON_UNESCAPED_UNICODE);
+				}elseif($r->code === 'duplicado'){
 					echo json_encode(array("status"=>false,"msg"=>'Ya está matriculado en esa gestión.'),JSON_UNESCAPED_UNICODE);
 				}else{
-					echo json_encode(array("status"=>false,"msg"=>'No se pudo rematricular: '.$res),JSON_UNESCAPED_UNICODE);
+					echo json_encode(array("status"=>false,"msg"=>$r->msg),JSON_UNESCAPED_UNICODE);
 				}
 				die();
 			}
