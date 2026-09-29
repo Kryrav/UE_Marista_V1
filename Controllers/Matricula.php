@@ -197,7 +197,7 @@
 					}
 					if ($_SESSION['permisosMod']['u']) {
 						$uid = intval($_SESSION['idUser'] ?? 0) ?: null; // I3 auditoría
-						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado,$uid);
+						$request_user=$this->model->updateMatricula($intIdMatricula,$intIdParalelo,$strTipoMatricula,$strFolio,$strStatus,$motivoEstado,$uid,$motivoRect);
 						if($request_user == "matricula_actualizada"){
 							// Si pasa a Confirmado y no es pendiente, se libera el plazo
 							if($strStatus === 'Pendiente_Documentos'){
@@ -341,8 +341,12 @@
 			if ($_POST && $_SESSION['permisosMod']['d']) {
 				if(!csrf_check($_POST['csrf_token'] ?? null)){ echo json_encode(array('status'=>false,'msg'=>'Sesión expirada. Recargue la página.'),JSON_UNESCAPED_UNICODE); die(); }
 				$intId = intval($_POST['idMatricula'] ?? 0);
-				if ($intId > 0 && $this->model->deleteMatricula($intId)) {
-					$arrResponse = array('status'=>true,'msg'=>'Matrícula dada de baja.');
+				if($intId <= 0){ echo json_encode(array('status'=>false,'msg'=>'ID inválido.'),JSON_UNESCAPED_UNICODE); die(); }
+				$res = $this->model->deleteMatricula($intId);
+				if ($res === true) {
+					$arrResponse = array('status'=>true,'msg'=>'Matrícula dada de baja (pensiones pendientes anuladas).');
+				}elseif($res === 'has_pagos'){
+					$arrResponse = array('status'=>false,'msg'=>'No se puede dar de baja: tiene pensiones cobradas. Use Retirado/Trasladado en su lugar.');
 				}else{
 					$arrResponse = array('status'=>false,'msg'=>'Error al eliminar la matrícula.');
 				}

@@ -162,9 +162,14 @@
         // Actualizar matrícula existente (no regenera pensiones)
         // ITERACIÓN 2: motivo_estado opcional (M02, tolerante si la columna no existe).
         // I3: $userId fija updated_by (tolerante).
-        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '', ?int $userId = null)
+        // REV-Mat: $motivoRect se anexa al motivo (rectificación en edición).
+        public function updateMatricula(int $idMatricula, int $idParalelo, string $tipo, string $folio, string $estadoInscripcion, string $motivo = '', ?int $userId = null, string $motivoRect = '')
         {
             $motivo = trim($motivo);
+            $motivoRect = trim($motivoRect);
+            if($motivoRect !== ''){
+                $motivo = trim(($motivo !== '' ? $motivo.' — ' : '').'Rectificación histórica: '.$motivoRect);
+            }
             try {
                 $sql = "UPDATE matricula SET id_paralelo = ?, tipo = ?, folio = ?, estado_inscripcion = ?, motivo_estado = ? WHERE id_matricula = ?";
                 $ok = $this->update($sql, [$idParalelo, $tipo, $folio, $estadoInscripcion, $motivo !== '' ? $motivo : null, $idMatricula]);
@@ -178,11 +183,28 @@
             return $ok ? "matricula_actualizada" : false;
         }
 
-        // Baja lógica de matrícula
+        // Baja lógica de matrícula.
+        // REV-Mat: bloqueada si tiene pensiones COBRADAS (integridad financiera);
+        // si no, arrastra pensiones pendientes a status 0 para no dejar deuda
+        // huérfana en fichas y morosidad. Todo en transacción.
         public function deleteMatricula(int $idMatricula)
         {
-            $sql = "UPDATE matricula SET status = 0 WHERE id_matricula = ?";
-            return $this->update($sql, [$idMatricula]);
+            try {
+                $pag = $this->select(
+                    "SELECT COUNT(*) AS c FROM pensiones WHERE id_matricula = ? AND estado_pago = 1 AND status = 1",
+                    [$idMatricula]);
+                if(!empty($pag["c"])){
+                    return "has_pagos";
+                }
+                $this->beginTransaction();
+                $this->update("UPDATE pensiones SET status = 0 WHERE id_matricula = ?", [$idMatricula]);
+                $this->update("UPDATE matricula SET status = 0 WHERE id_matricula = ?", [$idMatricula]);
+                $this->commit();
+                return true;
+            } catch (Exception $e) {
+                try{ $this->rollback(); }catch(Exception $x){}
+                return false;
+            }
         }
 
     }

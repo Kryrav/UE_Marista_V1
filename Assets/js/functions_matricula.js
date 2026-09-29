@@ -247,6 +247,7 @@ function fntEditMatricula(element, idMatricula){
                 // ITERACIÓN 2: motivo de estado terminal
                 let mo = document.querySelector('#motivoEstado'); if(mo) mo.value = d.motivo_estado || "";
                 toggleMotivoBox();
+                toggleRectBox();
                 fntListParalelos(d.gestion, d.id_paralelo);
                 $('#modalFormMatricula').modal('show');
             }else{
