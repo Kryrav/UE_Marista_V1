@@ -1,0 +1,5 @@
+BACKUP M07 — db_marista (MySQL 9.1.0)
+PRE : db_marista_PRE-M07.sql (antes del fix JOIN)
+POST: db_marista_POST-M07.sql (SPs sp_contar_inscritos_paralelo_por_gestion y
+paralelo_por_gestion con la condición de gestión en el ON)
+Restaurar: mysql -u root db_marista < <archivo>

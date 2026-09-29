@@ -299,8 +299,9 @@ function fntRematricular(ci){
             document.querySelector('#txtCi').disabled = true;
             document.querySelector('#titleModal').innerHTML = "Rematricular: " + d.nombre_estudiante + " " + d.apellido_estudiante + " (" + d.ci_estudiante + ")";
             document.querySelector('#btnText').innerHTML = "Rematricular";
+            // REV-MAT3: destino siempre la activa; si ya está matriculado ahí,
+            // se avisa (el duplicado se bloqueará; para cambiar de curso use Editar)
             let dest = o.gestion_activa || new Date().getFullYear();
-            if(parseInt(d.gestion) >= dest){ dest = parseInt(d.gestion) + 1; }
             document.querySelector('#intGestion').value = dest;
             document.querySelector('#listTipoEstudiante').value = d.tipo_matricula || 'Regular';
             document.querySelector('#listStateInscripcion').value = 'Inscrito';
@@ -310,7 +311,11 @@ function fntRematricular(ci){
             setRematUI(true);
             fntListParalelos(dest);
             toggleRectBox();
-            swal("Rematriculación", "Última: gestión " + d.gestion + " · " + (d.curso || 'sin curso') + " · " + d.estado_inscripcion + ". Elija el nuevo paralelo.", "info");
+            let yaMat = (parseInt(d.gestion) === dest);
+            swal("Rematriculación",
+                "Última: gestión " + d.gestion + " · " + (d.curso || 'sin curso') + " · " + d.estado_inscripcion + ". Elija el nuevo paralelo."
+                + (yaMat ? " NOTA: ya está matriculado en " + dest + "; si solo cambia de curso, cancele y use Editar en su fila." : ""),
+                yaMat ? "warning" : "info");
             $('#modalFormMatricula').modal('show');
         }
     }
